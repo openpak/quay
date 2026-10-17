@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Quay
+Comment=Wii U emulator by OpenPak
+Exec=quay
+Icon=org.openpak.quay
+Terminal=false
+Categories=Game;Emulator;
+StartupWMClass=org.openpak.quay
