@@ -5,7 +5,8 @@
 #include <string_view>
 
 // OpenPak: the account session and the identity application (PRD
-// emulators/prds/emulator-integration-prd.md E3, NA-1a).
+// emulators/prds/emulator-integration-prd.md E3, NA-1a). Not named Account.h: on a
+// case-insensitive file system that would shadow the client library's <openpak/account.h>.
 //
 // Sign-in exchanges an OpenPak email and password for a website bearer
 // (POST /api/v1/token), asks for the account's Wii U identity (GET
@@ -19,8 +20,10 @@
 // §5.10): the slot it was applied to first, remembered in OpenPakPrefs::Slot(). Sign-out
 // leaves that Mii account alone, and the next sign-in writes into it again.
 //
-// The session file lives at config/openpak_session.txt (key=value). The
-// bearer is a website credential: it only ever travels to the OpenPak website.
+// The website sign-in (the bearer) is the shared client library's account file
+// (config/openpak_account.txt, openpak-client); the Wii U identity lives at
+// config/openpak_session.txt (key=value). The bearer is a website credential:
+// it only ever travels to the OpenPak website.
 // Errors are OpenPakError codes (Errors.h) or internal English messages.
 
 namespace OpenPakAccount

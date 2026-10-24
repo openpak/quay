@@ -1,7 +1,7 @@
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 
+#include "Cemu/OpenPak/Client.h"
 #include "Cemu/OpenPak/Errors.h"
-#include "Cemu/OpenPak/NetworkProfile.h"
 #include "Cemu/OpenPak/Prefs.h"
 #include "Cemu/Logging/CemuLogging.h"
 #include "Cemu/ncrypto/ncrypto.h"
@@ -10,15 +10,15 @@
 #include "config/CemuConfig.h"
 #include "config/NetworkSettings.h"
 
-#include <curl/curl.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <openpak/account.h>
+#include <openpak/api.h>
+#include <openpak/platform.h>
+#include <httplib.h>
+#include <nlohmann/json.hpp>
 #include <fmt/core.h>
 
 #include <algorithm>
 #include <array>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -28,11 +28,16 @@
 #include <thread>
 #include <vector>
 
+// The website session (the bearer) is the client library's account file, config/openpak_account.txt,
+// shared with every OpenPak emulator. What is Wii U's alone -- the PNID, the Mii and the account.dat
+// password cache the website minted -- stays in config/openpak_session.txt, keys as before.
+
 namespace
 {
+	namespace Api = WebService::OpenPakApi;
+
 	std::mutex g_mutex;
 	bool g_loaded = false;
-	std::string g_bearer;
 	std::string g_accountId;   // core account uuid
 	uint32 g_pid = 0;
 	std::string g_username;    // the NNID
@@ -61,17 +66,32 @@ namespace
 		return out;
 	}
 
+	// Caller holds g_mutex.
+	void SaveSession()
+	{
+		std::ofstream file(SessionPath(), std::ios::trunc);
+		file << "account_id=" << g_accountId << std::endl;
+		file << "username=" << g_username << std::endl;
+		file << "pid=" << fmt::format("{:08x}", g_pid) << std::endl;
+		file << "mii_name=" << g_miiName << std::endl;
+		file << "mii_data=" << g_miiData << std::endl;
+		file << "password_cache=" << g_passwordCache << std::endl;
+		file << "country=" << g_country << std::endl;
+		file << "language=" << g_language << std::endl;
+	}
+
+	// Caller holds g_mutex.
 	void EnsureLoaded()
 	{
 		if (g_loaded)
 			return;
 		g_loaded = true;
+		OpenPakClient::Init();
 		const auto values = ParseKeyValueFile(SessionPath());
 		auto pick = [&values](const char* key) {
 			const auto it = values.find(key);
 			return it != values.end() ? it->second : std::string{};
 		};
-		g_bearer = pick("bearer");
 		g_accountId = pick("account_id");
 		g_username = pick("username");
 		g_miiName = pick("mii_name");
@@ -87,109 +107,73 @@ namespace
 		{
 			g_pid = 0;
 		}
+		// Builds before the client library kept the bearer in this file: it moves to the library's
+		// account file once, and this file keeps the rest.
+		if (const std::string bearer = pick("bearer"); !bearer.empty())
+		{
+			if (!Common::OpenPakAccount::HasBearer())
+				Common::OpenPakAccount::SaveBearerOnly(g_username, bearer);
+			SaveSession();
+			cemuLog_log(LogType::Force, "OpenPak: moved the stored sign-in to the shared account file");
+		}
 	}
 
-	void SaveSession()
+	struct WiiUIdentity
 	{
-		std::ofstream file(SessionPath(), std::ios::trunc);
-		file << "account_id=" << g_accountId << std::endl;
-		file << "username=" << g_username << std::endl;
-		file << "pid=" << fmt::format("{:08x}", g_pid) << std::endl;
-		file << "mii_name=" << g_miiName << std::endl;
-		file << "mii_data=" << g_miiData << std::endl;
-		file << "password_cache=" << g_passwordCache << std::endl;
-		file << "country=" << g_country << std::endl;
-		file << "language=" << g_language << std::endl;
-		file << "bearer=" << g_bearer << std::endl;
-	}
-
-	// The website API base: OPENPAK_API, else the Website setting, https or loopback only.
-	// TLS is never switched off here — the bearer only travels to a certified website.
-	std::string ApiBase() { return OpenPakPrefs::ApiBase(); }
-
-	size_t WriteBodyCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
-	{
-		auto* body = (std::string*)userdata;
-		body->append(ptr, size * nmemb);
-		return size * nmemb;
-	}
-
-	struct HttpResponse
-	{
-		long status = 0;
-		std::string body;
-		std::string error; // transport failure
+		std::string error; // an OpenPakError code when the identity could not be had
+		nlohmann::json doc;
 	};
 
-	HttpResponse Request(const char* method, const std::string& url, const std::string& body,
-						 const std::vector<std::string>& headers)
+	// GET /api/v1/me/wiiu: the account's Wii U identity, minted server-side on first sight.
+	WiiUIdentity FetchWiiUIdentity(const std::string& bearer)
 	{
-		HttpResponse out;
-		CURL* curl = curl_easy_init();
-		if (!curl)
+		WiiUIdentity out;
+		httplib::Client client(Api::BaseUrl());
+		Api::ApplySystemCa(client);
+		client.set_connection_timeout(15);
+		client.set_read_timeout(15);
+		httplib::Headers headers{{"Authorization", "Bearer " + bearer}};
+		if (std::string header = openpak::Platform::ClientHeader(); !header.empty())
+			headers.emplace("X-OpenPak-Client", std::move(header));
+		const auto result = client.Get("/api/v1/me/wiiu", headers);
+		if (!result)
 		{
-			out.error = "curl init failed";
+			cemuLog_log(LogType::Force, "OpenPak: could not reach the website: {}", httplib::to_string(result.error()));
+			out.error = OpenPakError::Unreachable;
 			return out;
 		}
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out.body);
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "cemu-openpak-account");
-		curl_slist* headerList = nullptr;
-		for (auto& h : headers)
-			headerList = curl_slist_append(headerList, h.c_str());
-		if (!body.empty())
+		nlohmann::json doc = nlohmann::json::parse(result->body, nullptr, false);
+		if (result->status != 200)
 		{
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
-			headerList = curl_slist_append(headerList, "Content-Type: application/json");
+			if (doc.is_object() && doc.contains("error") && doc["error"].is_string() && !doc["error"].get<std::string>().empty())
+				out.error = OpenPakError::Server(doc["error"].get<std::string>());
+			else
+			{
+				cemuLog_log(LogType::Force, "OpenPak: the account request failed (HTTP {})", result->status);
+				out.error = OpenPakError::Unreachable;
+			}
+			return out;
 		}
-		if (headerList)
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
-
-		const CURLcode code = curl_easy_perform(curl);
-		if (code == CURLE_OK)
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &out.status);
-		else
-			out.error = curl_easy_strerror(code);
-		if (headerList)
-			curl_slist_free_all(headerList);
-		curl_easy_cleanup(curl);
+		if (!doc.is_object())
+		{
+			cemuLog_log(LogType::Force, "OpenPak: the identity response was not understood");
+			out.error = OpenPakError::Unreachable;
+			return out;
+		}
+		out.doc = std::move(doc);
 		return out;
 	}
 
-	// The server's own sentence when it sent one; otherwise the HTTP code goes to the log and
-	// the UI says the website could not be reached.
-	std::string ErrorFrom(const std::string& body, long status)
+	std::string JsonString(const nlohmann::json& doc, const char* field)
 	{
-		rapidjson::Document doc;
-		if (!doc.Parse(body.c_str()).HasParseError() && doc.HasMember("error") && doc["error"].IsString() &&
-			doc["error"].GetStringLength() > 0)
-			return OpenPakError::Server(doc["error"].GetString());
-		cemuLog_log(LogType::Force, "OpenPak: the account request failed (HTTP {})", status);
-		return OpenPakError::Unreachable;
+		const auto it = doc.find(field);
+		return it != doc.end() && it->is_string() ? it->get<std::string>() : std::string{};
 	}
 
-	std::string TransportError(const std::string& error)
+	uint32 JsonUint(const nlohmann::json& doc, const char* field)
 	{
-		cemuLog_log(LogType::Force, "OpenPak: could not reach the website: {}", error);
-		return OpenPakError::Unreachable;
-	}
-
-	std::string JsonString(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.HasMember(field) && doc[field].IsString())
-			return doc[field].GetString();
-		return {};
-	}
-
-	uint32 JsonUint(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.HasMember(field) && doc[field].IsUint64())
-			return (uint32)doc[field].GetUint64();
-		return 0;
+		const auto it = doc.find(field);
+		return it != doc.end() && it->is_number_unsigned() ? (uint32)it->get<uint64>() : 0;
 	}
 
 	std::string ToHex(const uint8* data, size_t len)
@@ -249,75 +233,30 @@ namespace OpenPakAccount
 	SignInResult SignIn(std::string_view email, std::string_view password, std::string_view deviceName)
 	{
 		SignInResult out;
-		EnsureLoaded();
-
-		rapidjson::StringBuffer sb;
-		rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-		writer.StartObject();
-		writer.Key("email");
-		writer.String(email.data(), email.size());
-		writer.Key("password");
-		writer.String(password.data(), password.size());
+		{
+			std::lock_guard lock(g_mutex);
+			EnsureLoaded();
+		}
 		if (!deviceName.empty())
 		{
 			// how this machine appears in the account's device list (UX spec §3.3)
-			writer.Key("device_name");
-			writer.String(deviceName.data(), deviceName.size());
+			Api::SetDeviceName(std::string(deviceName));
+			Api::SetSaveDevice(std::string(deviceName));
 		}
-		writer.EndObject();
+		const auto login = Api::SignInAccountOnly(std::string(email), std::string(password));
+		if (!login.ok)
+		{
+			out.error = OpenPakError::FromLibrary(login.error);
+			return out;
+		}
 
-		const auto minted = Request("POST", ApiBase() + "/api/v1/token", sb.GetString(), {});
-		if (!minted.error.empty())
-		{
-			out.error = TransportError(minted.error);
-			return out;
-		}
-		if (minted.status == 401 || minted.status == 403)
-		{
-			out.error = OpenPakError::Credentials;
-			return out;
-		}
-		if (minted.status == 429)
-		{
-			out.error = OpenPakError::RateLimited;
-			return out;
-		}
-		if (minted.status != 200 && minted.status != 201)
-		{
-			out.error = ErrorFrom(minted.body, minted.status);
-			return out;
-		}
-		rapidjson::Document tokenDoc;
-		if (tokenDoc.Parse(minted.body.c_str()).HasParseError() || !tokenDoc.HasMember("token") ||
-			!tokenDoc["token"].IsString())
-		{
-			cemuLog_log(LogType::Force, "OpenPak: the sign-in response was not understood");
-			out.error = OpenPakError::Unreachable;
-			return out;
-		}
-		const std::string bearer = tokenDoc["token"].GetString();
-
-		// The Wii U identity of the account: minted server-side on first sight.
-		const auto identity = Request(
-			"GET", ApiBase() + "/api/v1/me/wiiu", {},
-			{fmt::format("Authorization: Bearer {}", bearer)});
+		const auto identity = FetchWiiUIdentity(login.bearer);
 		if (!identity.error.empty())
 		{
-			out.error = TransportError(identity.error);
+			out.error = identity.error;
 			return out;
 		}
-		if (identity.status != 200)
-		{
-			out.error = ErrorFrom(identity.body, identity.status);
-			return out;
-		}
-		rapidjson::Document idDoc;
-		if (idDoc.Parse(identity.body.c_str()).HasParseError())
-		{
-			cemuLog_log(LogType::Force, "OpenPak: the identity response was not understood");
-			out.error = OpenPakError::Unreachable;
-			return out;
-		}
+		const auto& idDoc = identity.doc;
 		const uint32 pid = JsonUint(idDoc, "pid");
 		const std::string username = JsonString(idDoc, "username");
 		const std::string miiData = JsonString(idDoc, "mii_data");
@@ -331,7 +270,6 @@ namespace OpenPakAccount
 
 		{
 			std::lock_guard lock(g_mutex);
-			g_bearer = bearer;
 			g_accountId = JsonString(idDoc, "account_id");
 			g_pid = pid;
 			g_username = username;
@@ -341,6 +279,7 @@ namespace OpenPakAccount
 			g_country = JsonString(idDoc, "country");
 			g_language = JsonString(idDoc, "language");
 			SaveSession();
+			Common::OpenPakAccount::SaveBearerOnly(username, login.bearer);
 		}
 		out.ok = true;
 		return out;
@@ -348,12 +287,12 @@ namespace OpenPakAccount
 
 	void SignOut()
 	{
-		EnsureLoaded();
 		std::string bearer;
 		{
 			std::lock_guard lock(g_mutex);
-			bearer = g_bearer;
-			g_bearer.clear();
+			EnsureLoaded();
+			bearer = Common::OpenPakAccount::GetBearer();
+			Common::OpenPakAccount::Clear();
 			g_accountId.clear();
 			g_pid = 0;
 			g_username.clear();
@@ -367,43 +306,32 @@ namespace OpenPakAccount
 		// End the website session too: best-effort, in the background, so presence ends now
 		// without the UI waiting on the network.
 		if (!bearer.empty())
-		{
-			std::thread([bearer, base = ApiBase()]() {
-				Request("DELETE", base + "/api/v1/token", {}, {fmt::format("Authorization: Bearer {}", bearer)});
-			}).detach();
-		}
+			std::thread([bearer]() { Api::RevokeToken(bearer); }).detach();
 	}
 
 	bool DropIfRejected()
 	{
-		const std::string bearer = GetBearer();
-		if (bearer.empty())
+		if (!IsSignedIn())
 			return false;
-		const auto resp = Request("GET", ApiBase() + "/api/v1/me", {}, {fmt::format("Authorization: Bearer {}", bearer)});
-		if (!resp.error.empty() || resp.status != 401)
+		// GET /api/v1/me: the library signs out on a 401, and only on a 401.
+		Api::GetProfile();
+		if (Common::OpenPakAccount::HasBearer())
 			return false;
-		{
-			std::lock_guard lock(g_mutex);
-			if (g_bearer != bearer)
-				return false; // signed in again meanwhile
-			g_bearer.clear();
-			SaveSession();
-		}
 		cemuLog_log(LogType::Force, "OpenPak: the stored sign-in was refused; signed out");
 		return true;
 	}
 
 	std::string GetMiiName()
 	{
-		EnsureLoaded();
 		std::lock_guard lock(g_mutex);
+		EnsureLoaded();
 		return g_miiName;
 	}
 
 	uint32_t GetPid()
 	{
-		EnsureLoaded();
 		std::lock_guard lock(g_mutex);
+		EnsureLoaded();
 		return g_pid;
 	}
 
@@ -422,32 +350,36 @@ namespace OpenPakAccount
 
 	bool IsSignedIn()
 	{
-		EnsureLoaded();
-		std::lock_guard lock(g_mutex);
-		return !g_bearer.empty();
+		{
+			std::lock_guard lock(g_mutex);
+			EnsureLoaded();
+		}
+		return Common::OpenPakAccount::HasBearer();
 	}
 
 	std::string GetUsername()
 	{
-		EnsureLoaded();
 		std::lock_guard lock(g_mutex);
+		EnsureLoaded();
 		return g_username;
 	}
 
 	std::string GetBearer()
 	{
-		EnsureLoaded();
-		std::lock_guard lock(g_mutex);
-		return g_bearer;
+		{
+			std::lock_guard lock(g_mutex);
+			EnsureLoaded();
+		}
+		return Common::OpenPakAccount::GetBearer();
 	}
 
 	std::string ApplyIdentity()
 	{
-		EnsureLoaded();
 		std::string username, miiName, miiData, passwordCache, country;
 		uint32 pid = 0;
 		{
 			std::lock_guard lock(g_mutex);
+			EnsureLoaded();
 			username = g_username;
 			pid = g_pid;
 			miiName = g_miiName;
@@ -559,7 +491,7 @@ namespace OpenPakAccount
 
 		cemuLog_log(LogType::Force,
 			"OpenPak: applied the identity of {} (PID {:x}) as account {:08x}; the OpenPak service is selected",
-			miiName.empty() ? g_username : miiName, pid, persistentId);
+			miiName.empty() ? username : miiName, pid, persistentId);
 		return {};
 	}
 } // namespace OpenPakAccount

@@ -1,6 +1,6 @@
 #include "wxgui/OpenPakUI.h"
 
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 #include "Cemu/OpenPak/Errors.h"
 #include "Cemu/OpenPak/NetworkProfile.h"
 #include "Cemu/OpenPak/Prefs.h"
@@ -36,7 +36,6 @@
 #include <cctype>
 #include <cstdio>
 #include <map>
-#include <random>
 #include <set>
 #include <thread>
 
@@ -370,8 +369,9 @@ namespace
 			m_busy = true;
 			const uint64 generation = m_generation;
 			std::thread([this, generation]() {
-				auto friends = OpenPakSocial::GetFriends();
-				auto requests = OpenPakSocial::GetRequests();
+				auto graph = OpenPakSocial::GetFriendsAndRequests();
+				auto friends = std::move(graph.first);
+				auto requests = std::move(graph.second);
 				auto invitations = OpenPakSocial::GetInvitations();
 				OpenPakSocial::GetCatalogue(); // names for the toasts
 				wxTheApp->CallAfter([this, generation, friends, requests, invitations]() {
@@ -456,38 +456,6 @@ namespace
 	};
 
 	Poller* g_poller = nullptr;
-
-	// ---- network re-check (docs/signed-ceiling.md, client rule 4) ------------------------
-
-	// Every six hours, give or take ten per cent, the signed ceiling and the wiiu profile are
-	// fetched again off the UI thread. A new effective set raises the change notice through
-	// OpenPakNetworkProfile's listener.
-	constexpr int kRecheckMs = 6 * 60 * 60 * 1000;
-
-	class NetworkRecheck : public wxEvtHandler
-	{
-	  public:
-		NetworkRecheck()
-		{
-			m_timer.SetOwner(this);
-			Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
-				OpenPakUI::RecheckNetwork();
-				Schedule();
-			});
-		}
-
-		void Schedule()
-		{
-			std::uniform_int_distribution<int> jitter(kRecheckMs / 10 * 9, kRecheckMs / 10 * 11);
-			m_timer.StartOnce(jitter(m_rng));
-		}
-
-	  private:
-		wxTimer m_timer;
-		std::mt19937 m_rng{std::random_device{}()};
-	};
-
-	NetworkRecheck* g_recheck = nullptr;
 
 	// days since 1970-01-01 for a civil date (Howard Hinnant's algorithm)
 	int64_t DaysFromCivil(int64_t y, unsigned m, unsigned d)
@@ -715,8 +683,7 @@ namespace OpenPakUI
 			Toast(_("OPENPAK"), wxString::Format(_("Signed in as %s."), name), ToastTarget::Account);
 		NotifyAccountChanged();
 		LoadAvatar();
-		StartPoller();
-		RecheckNetwork(); // rule 4: re-check after an OpenPak sign-in
+		StartPoller(); // the client library re-checks the network after a sign-in itself (rule 4)
 		return true;
 	}
 
@@ -877,15 +844,5 @@ namespace OpenPakUI
 					ToastTarget::None, true);
 			});
 		});
-		if (!g_recheck)
-		{
-			g_recheck = new NetworkRecheck();
-			g_recheck->Schedule();
-		}
-	}
-
-	void RecheckNetwork()
-	{
-		std::thread([]() { OpenPakNetworkProfile::Refresh(); }).detach();
 	}
 } // namespace OpenPakUI

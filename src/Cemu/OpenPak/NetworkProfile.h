@@ -6,26 +6,27 @@
 
 // OpenPak: the applied network profile (emulators/prds/emulator-network-profile-prd.md §4b).
 //
-// Cemu addresses service URLs rather than resolving names, so this consumes the profile's
-// services[] and nothing else from redirect.*. One conditional GET per launch, two-second
-// timeout, best-effort: last-known-good beats a fetch, the compiled-in OpenPakURLs beat
-// nothing, and a game starts either way.
+// The fetch, validation, cache and signed ceiling are the shared client library's
+// (openpak::NetworkProfile, platform "wiiu"). Cemu addresses service URLs rather than resolving
+// names, so it uses the profile's services[] and nothing else from redirect.*. One conditional GET
+// per launch, two-second timeout, best-effort: last-known-good beats a fetch, the compiled-in
+// OpenPakURLs beat nothing, and a game starts either way.
 namespace OpenPakNetworkProfile
 {
 	// §2: one conditional GET with the stored ETag, alongside the signed ceiling
-	// (docs/signed-ceiling.md, OpenPakCeiling). A fresh profile of the right shape is cached;
-	// 304 or any failure uses what is stored; nothing stored means the compiled-in OpenPakURLs.
-	// Whatever profile is used goes through the verified ceiling: a service or redirect name
-	// outside it is dropped on its own and logged, never the whole profile. Never retries, never
-	// blocks longer than two seconds.
+	// (docs/signed-ceiling.md). A fresh profile of the right shape is cached; 304 or any failure
+	// uses what is stored; nothing stored means the compiled-in OpenPakURLs. Whatever profile is
+	// used goes through the verified ceiling: a service or redirect name outside it is dropped on
+	// its own and logged, never the whole profile. Never retries, never blocks longer than two
+	// seconds. Starts the library's six-hourly re-check, which applies a changed set.
 	void ApplyAtLaunch();
 
-	// The "Refresh network settings" action, the six-hour re-check and the re-check after a
-	// sign-in. Same flow, safe to ask for from any thread while Cemu runs.
+	// The "Refresh network settings" action. Same flow, safe to ask for from any thread while
+	// Cemu runs.
 	void Refresh();
 
-	// Client rule 4 of the ceiling contract: called (on the refreshing thread) once for each new
-	// digest of the effective wiiu service set that a Refresh after launch lands on.
+	// Client rule 4 of the ceiling contract: called (on the refreshing thread) when a refresh
+	// after launch lands on a new effective wiiu set.
 	void SetChangeListener(std::function<void()> listener);
 
 	// The URL for a service id ("act", "ecs", "nus", "ias", "ccsu", "ccs", "idbe", "boss",

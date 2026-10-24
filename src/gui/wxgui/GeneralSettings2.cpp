@@ -18,7 +18,7 @@
 #include "config/CemuConfig.h"
 #include "config/NetworkSettings.h"
 #include "Cemu/OpenPak/NetworkProfile.h"
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 #include "Cemu/OpenPak/Prefs.h"
 #include "wxgui/OpenPakUI.h"
 #include "wxgui/OpenPakWindow.h"
@@ -2466,7 +2466,7 @@ wxPanel* GeneralSettings2::AddOpenPakPage(wxNotebook* notebook)
 		auto* websiteRow = new wxBoxSizer(wxHORIZONTAL);
 		websiteRow->Add(new wxStaticText(pane, wxID_ANY, _("Website")), 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 		m_openpak_website = new wxTextCtrl(pane, wxID_ANY, wxString::FromUTF8(OpenPakPrefs::Website()));
-		m_openpak_website->SetToolTip(_("Where the account lives and where you sign in. Leave this at openpak.org unless you run your own deployment."));
+		m_openpak_website->SetToolTip(_("Where the account lives and where you sign in. Leave this at openpak.org unless you run your own deployment. A change applies from the next start."));
 		websiteRow->Add(m_openpak_website, 1, wxEXPAND | wxALL, 5);
 		paneSizer->Add(websiteRow, 0, wxEXPAND);
 		auto* profileRow = new wxBoxSizer(wxHORIZONTAL);

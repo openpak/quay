@@ -9,10 +9,8 @@ add_library(CemuComponents
   napi/napi_act.cpp
   napi/napi_ec.cpp
   napi/napi.cpp
-  OpenPak/Account.cpp
-  OpenPak/Account.h
-  OpenPak/Ceiling.cpp
-  OpenPak/Ceiling.h
+  OpenPak/Client.cpp
+  OpenPak/Client.h
   OpenPak/DeviceIdentity.cpp
   OpenPak/DeviceIdentity.h
   OpenPak/Errors.h
@@ -22,6 +20,8 @@ add_library(CemuComponents
   OpenPak/Prefs.h
   OpenPak/Social.cpp
   OpenPak/Social.h
+  OpenPak/WiiUAccount.cpp
+  OpenPak/WiiUAccount.h
   napi/napi.h
   napi/napi_helper.cpp
   napi/napi_helper.h
@@ -65,3 +65,6 @@ target_link_libraries(CemuComponents PRIVATE
 
 # PUBLIC because fmt/format.h is included in ExpressionParser/ExpressionParser.h
 target_link_libraries(CemuComponents PUBLIC fmt::fmt)
+
+# OpenPak's shared client library; PUBLIC because the wx UI includes its headers through Errors.h.
+target_link_libraries(CemuComponents PUBLIC openpak::client)
