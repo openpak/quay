@@ -5,7 +5,8 @@
 #include <string_view>
 
 // OpenPak: the account session and the identity application (PRD
-// emulators/prds/emulator-integration-prd.md E3, NA-1a).
+// emulators/prds/emulator-integration-prd.md E3, NA-1a). Not named Account.h: on a
+// case-insensitive file system that would shadow the client library's <openpak/account.h>.
 //
 // Sign-in exchanges an OpenPak email and password for a website bearer
 // (POST /api/v1/token), asks for the account's Wii U identity (GET

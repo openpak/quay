@@ -1,6 +1,6 @@
 #include "wxgui/OpenPakUI.h"
 
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 #include "Cemu/OpenPak/Errors.h"
 #include "Cemu/OpenPak/NetworkProfile.h"
 #include "Cemu/OpenPak/Prefs.h"

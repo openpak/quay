@@ -1,4 +1,4 @@
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 
 #include "Cemu/OpenPak/Client.h"
 #include "Cemu/OpenPak/Errors.h"

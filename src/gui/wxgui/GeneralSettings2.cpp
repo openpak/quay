@@ -18,7 +18,7 @@
 #include "config/CemuConfig.h"
 #include "config/NetworkSettings.h"
 #include "Cemu/OpenPak/NetworkProfile.h"
-#include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/WiiUAccount.h"
 #include "Cemu/OpenPak/Prefs.h"
 #include "wxgui/OpenPakUI.h"
 #include "wxgui/OpenPakWindow.h"

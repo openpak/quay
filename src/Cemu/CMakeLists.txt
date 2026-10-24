@@ -9,8 +9,6 @@ add_library(CemuComponents
   napi/napi_act.cpp
   napi/napi_ec.cpp
   napi/napi.cpp
-  OpenPak/Account.cpp
-  OpenPak/Account.h
   OpenPak/Client.cpp
   OpenPak/Client.h
   OpenPak/DeviceIdentity.cpp
@@ -22,6 +20,8 @@ add_library(CemuComponents
   OpenPak/Prefs.h
   OpenPak/Social.cpp
   OpenPak/Social.h
+  OpenPak/WiiUAccount.cpp
+  OpenPak/WiiUAccount.h
   napi/napi.h
   napi/napi_helper.cpp
   napi/napi_helper.h
