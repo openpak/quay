@@ -252,7 +252,7 @@ jobs:
         gh release upload "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --clobber
 
   build-macos:
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
@@ -281,7 +281,7 @@ jobs:
         brew uninstall bicep
         brew untap aws/tap azure/bicep
         brew update
-        brew install nasm automake libtool
+        brew install nasm automake libtool mono
 
     - name: "Install molten-vk"
       run: |
