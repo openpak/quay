@@ -21,7 +21,13 @@ from its `services[]` by id. A service the profile does not name keeps its compi
 profile of the wrong shape is rejected whole and the last-known-good (or compiled-in) URLs
 apply, so a game starts either way.
 
-**Signed redirect ceiling** (`docs/signed-ceiling.md`, `src/Cemu/OpenPak/Ceiling.cpp`). The
+The website API, the account file, the network profile and the signed ceiling are the shared
+**openpak-client** library (`dependencies/openpak-client`, github.com/openpak/openpak-client,
+its `client/` part only; the window, menu and settings stay wxWidgets). `src/Cemu/OpenPak/`
+keeps what is Wii U's alone: the identity it writes into the emulated console, the synthesised
+device identity, the service URLs by id, and the wx UI's error codes.
+
+**Signed redirect ceiling** (`docs/signed-ceiling.md`, done by openpak-client). The
 domain families Cemu may address are no longer only compiled in: alongside the profile Cemu
 fetches `https://openpak.org/api/v1/network/ceiling` (pinned origin, public TLS, two seconds, in
 parallel with the profile), verifies the Ed25519 signature over the payload bytes with OpenSSL
@@ -32,8 +38,9 @@ ceiling, or with none the old compiled families (the first-boot fallback, never 
 The profile's `wiiu` names go through it one by one: a service whose host lies outside is dropped
 (that id keeps its compiled-in URL) and logged; so is a `redirect.suffixes`/`exact` entry — never
 the whole profile. The effective set is the ten resolved service URLs; its sha256 is taken at
-launch and after every refresh — the Refresh button, a re-check every six hours ±10 %, and one
-after an OpenPak sign-in. A digest not seen before raises one OPENPAK toast, *OpenPak updated this
+launch and after every refresh — the Refresh button, and the library's re-check every six hours
+±10 % and soon after an OpenPak sign-in, which applies a changed set. A new digest raises one
+OPENPAK toast, *OpenPak updated this
 system's network redirects. Restart the game to use them.* (over a running game it goes to the
 overlay like every toast), only while the active account uses the OpenPak service. Only wiiu
 services go into the digest, so a Switch change never notifies.
@@ -102,9 +109,12 @@ Mii account is created only when there is none. Sign-out keeps that Mii account.
 otp.bin/seeprom.bin dump and no MLC certificate store are needed on this service: when they are
 absent, Cemu synthesises a device identity once and reuses it (the adapter checks certificates
 structurally only), and the online check re-runs right after sign-in, so no restart is needed. A
-console dump that exists is never replaced. The session lives at `config/openpak_session.txt`;
-the bearer only ever travels to the website (`OPENPAK_API` or the Website setting,
-https-or-loopback).
+console dump that exists is never replaced. The website sign-in lives in the library's account
+file, `config/openpak_account.txt` (bearer-only, as every non-Switch OpenPak emulator keeps it);
+the Wii U identity stays in `config/openpak_session.txt`. A session file from an older build that
+still holds a `bearer=` line is moved over once at the first start and rewritten without it. The
+bearer only ever travels to the website (`OPENPAK_API` or the Website setting, https-or-loopback;
+a changed Website applies from the next start).
 
 Friends, requests and invitations come from the website API with the session bearer; in-game
 requests arrive through nn-friends into the same core graph, so the window shows what the games

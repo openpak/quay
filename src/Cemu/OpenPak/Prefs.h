@@ -27,9 +27,14 @@ namespace OpenPakPrefs
 	std::string Website();
 	void SetWebsite(const std::string& website);
 
-	// Where the account API lives: OPENPAK_API when it is https or loopback, else the Website
-	// setting when it is, else https://openpak.org. No trailing slash.
+	// Where the account API lives for this run: OPENPAK_API when it is https or loopback, else the
+	// Website setting when it is, else https://openpak.org. No trailing slash. The client library
+	// reads it once, at the first request, so a changed Website applies from the next start.
 	std::string ApiBase();
+
+	// Hands the Website setting to the client library (as OPENPAK_API) when the environment does
+	// not name an acceptable one itself. Called once at startup, before the first request.
+	void ExportWebsite();
 
 	// The device name the sign-in dialog last used (empty until the first sign-in).
 	std::string DeviceName();

@@ -1,130 +1,24 @@
 #include "Cemu/OpenPak/Social.h"
 #include "Cemu/OpenPak/Account.h"
+#include "Cemu/OpenPak/Client.h"
 #include "Cemu/OpenPak/Errors.h"
-#include "Cemu/OpenPak/Prefs.h"
-#include "Cemu/Logging/CemuLogging.h"
 
-#include <curl/curl.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <openpak/api.h>
 #include <fmt/core.h>
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
+#include <ctime>
 #include <mutex>
 #include <string>
 #include <vector>
 
+// The window's data, through the shared client library (WebService::OpenPakApi): same website
+// endpoints, same shapes. What is left here is the translation into the UI's types and its error
+// codes.
 namespace
 {
-	std::string ApiBase() { return OpenPakPrefs::ApiBase(); }
-
-	size_t WriteBodyCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
-	{
-		auto* body = (std::string*)userdata;
-		body->append(ptr, size * nmemb);
-		return size * nmemb;
-	}
-
-	struct HttpResponse
-	{
-		long status = 0;
-		std::string body;
-		std::string error;
-	};
-
-	HttpResponse Request(const char* method, const std::string& url, const std::string& body,
-						 const std::string& bearer, long timeoutSeconds = 15, bool followRedirects = false)
-	{
-		HttpResponse out;
-		CURL* curl = curl_easy_init();
-		if (!curl)
-		{
-			out.error = "curl init failed";
-			return out;
-		}
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeoutSeconds);
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, followRedirects ? 1L : 0L);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out.body);
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "cemu-openpak-social");
-		curl_slist* headers = nullptr;
-		if (!bearer.empty())
-			headers = curl_slist_append(headers, fmt::format("Authorization: Bearer {}", bearer).c_str());
-		if (!body.empty())
-		{
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
-			headers = curl_slist_append(headers, "Content-Type: application/json");
-		}
-		if (headers)
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-		const CURLcode code = curl_easy_perform(curl);
-		if (code == CURLE_OK)
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &out.status);
-		else
-			out.error = curl_easy_strerror(code);
-		if (headers)
-			curl_slist_free_all(headers);
-		curl_easy_cleanup(curl);
-		return out;
-	}
-
-	// The error code for a response that is not a success (see Errors.h).
-	std::string ErrorFor(const HttpResponse& resp, const char* what)
-	{
-		if (!resp.error.empty())
-		{
-			cemuLog_log(LogType::Force, "OpenPak: {}: {}", what, resp.error);
-			return OpenPakError::Unreachable;
-		}
-		if (resp.status == 401)
-			return OpenPakError::Expired;
-		if (resp.status == 429)
-			return OpenPakError::RateLimited;
-		rapidjson::Document doc;
-		if (!doc.Parse(resp.body.c_str()).HasParseError() && doc.IsObject() && doc.HasMember("error") &&
-			doc["error"].IsString() && doc["error"].GetStringLength() > 0)
-			return OpenPakError::Server(doc["error"].GetString());
-		cemuLog_log(LogType::Force, "OpenPak: {} failed (HTTP {})", what, resp.status);
-		return OpenPakError::Unreachable;
-	}
-
-	std::string JsonString(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.IsObject() && doc.HasMember(field) && doc[field].IsString())
-			return doc[field].GetString();
-		return {};
-	}
-
-	bool JsonBool(const rapidjson::Value& doc, const char* field)
-	{
-		return doc.IsObject() && doc.HasMember(field) && doc[field].IsBool() && doc[field].GetBool();
-	}
-
-	int64_t JsonInt(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.IsObject() && doc.HasMember(field) && doc[field].IsInt64())
-			return doc[field].GetInt64();
-		return 0;
-	}
-
-	uint64_t JsonUint(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.IsObject() && doc.HasMember(field) && doc[field].IsUint64())
-			return doc[field].GetUint64();
-		return 0;
-	}
-
-	double JsonDouble(const rapidjson::Value& doc, const char* field)
-	{
-		if (doc.IsObject() && doc.HasMember(field) && doc[field].IsNumber())
-			return doc[field].GetDouble();
-		return 0;
-	}
+	namespace Api = WebService::OpenPakApi;
 
 	std::string ToUpper(std::string s)
 	{
@@ -132,222 +26,137 @@ namespace
 		return s;
 	}
 
-	std::string ToLower(std::string s)
+	// RFC3339 UTC from unix seconds, as the UI's LocalTime reads it; empty when unknown.
+	std::string Rfc3339(int64_t seconds)
 	{
-		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-		return s;
+		if (seconds <= 0)
+			return {};
+		const std::time_t t = (std::time_t)seconds;
+		std::tm tm{};
+#if BOOST_OS_WINDOWS
+		gmtime_s(&tm, &t);
+#else
+		gmtime_r(&t, &tm);
+#endif
+		return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 
-	// Ids that go into a path: only the shapes the site mints.
-	bool IsTameId(const std::string& id)
-	{
-		return !id.empty() && id.size() <= 64 && std::all_of(id.begin(), id.end(), [](unsigned char c) {
-			return std::isalnum(c) || c == '-' || c == '_';
-		});
-	}
-
-	std::string JsonBody(const char* key, const std::string& value)
-	{
-		rapidjson::StringBuffer sb;
-		rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-		writer.StartObject();
-		writer.Key(key);
-		writer.String(value.c_str(), (rapidjson::SizeType)value.size());
-		writer.EndObject();
-		return sb.GetString();
-	}
-
-	OpenPakSocial::Friend ParseFriend(const rapidjson::Value& entry)
+	OpenPakSocial::Friend FromLibrary(const Api::AccountFriend& entry)
 	{
 		OpenPakSocial::Friend f;
-		if (!entry.IsObject())
-			return f;
-		f.account_id = JsonString(entry, "account_id");
-		f.display_name = JsonString(entry, "display_name");
-		f.online = JsonBool(entry, "online");
+		f.account_id = entry.account_id;
+		f.display_name = entry.display_name;
+		f.online = entry.online;
 		if (f.online)
 		{
-			f.title_id = ToUpper(JsonString(entry, "title_id"));
-			f.console = JsonString(entry, "namespace");
-			f.since = JsonString(entry, "since");
+			f.title_id = ToUpper(entry.title_id);
+			f.console = entry.console_namespace;
+			f.since = Rfc3339(entry.online_since);
 		}
 		return f;
 	}
 
-	bool GetBearerOr(std::string& bearer, std::string& error)
+	Api::AccountFriend Request(const std::string& account_id)
 	{
-		bearer = OpenPakAccount::GetBearer();
-		if (bearer.empty())
-		{
-			error = OpenPakError::NotSignedIn;
-			return false;
-		}
-		return true;
+		Api::AccountFriend request;
+		request.account_id = account_id;
+		return request;
 	}
 
-	// GET a JSON document with the bearer; on failure the error is set and false returned.
-	bool GetJson(const std::string& path, bool withBearer, rapidjson::Document& doc, std::string& error, const char* what)
-	{
-		std::string bearer;
-		if (withBearer && !GetBearerOr(bearer, error))
-			return false;
-		const auto resp = Request("GET", ApiBase() + path, {}, bearer);
-		if (!resp.error.empty() || resp.status != 200)
-		{
-			error = ErrorFor(resp, what);
-			return false;
-		}
-		if (doc.Parse(resp.body.c_str()).HasParseError() || !doc.IsObject())
-		{
-			cemuLog_log(LogType::Force, "OpenPak: {}: the response was not understood", what);
-			error = OpenPakError::Unreachable;
-			return false;
-		}
-		return true;
-	}
-
-	std::string PostAccount(const std::string& path, const std::string& account_id, const char* what)
-	{
-		std::string bearer, error;
-		if (!GetBearerOr(bearer, error))
-			return error;
-		const auto resp = Request("POST", ApiBase() + path, JsonBody("account_id", account_id), bearer);
-		if (!resp.error.empty() || (resp.status != 200 && resp.status != 201 && resp.status != 204))
-			return ErrorFor(resp, what);
-		return {};
-	}
-
-	std::optional<std::vector<uint8_t>> FetchPublic(const std::string& path)
-	{
-		const auto resp = Request("GET", ApiBase() + path, {}, {}, 15, true);
-		if (!resp.error.empty() || resp.status != 200 || resp.body.empty())
-			return std::nullopt;
-		return std::vector<uint8_t>(resp.body.begin(), resp.body.end());
-	}
+	std::mutex s_catalogueMutex;
+	std::map<std::string, OpenPakSocial::CatalogueTitle> s_catalogue;
 } // namespace
 
 namespace OpenPakSocial
 {
-	FriendList GetFriends()
+	std::pair<FriendList, RequestList> GetFriendsAndRequests()
 	{
-		FriendList out;
-		rapidjson::Document doc;
-		if (!GetJson("/api/v1/me/friends", true, doc, out.error, "friends"))
+		OpenPakClient::Init();
+		std::pair<FriendList, RequestList> out;
+		const auto graph = Api::GetAccountFriends();
+		if (!graph.ok)
+		{
+			out.first.error = out.second.error = OpenPakError::FromLibrary(graph.error);
 			return out;
-		if (doc.HasMember("friends") && doc["friends"].IsArray())
-			for (const auto& entry : doc["friends"].GetArray())
-				out.friends.push_back(ParseFriend(entry));
-		out.ok = true;
-		return out;
-	}
-
-	RequestList GetRequests()
-	{
-		RequestList out;
-		rapidjson::Document doc;
-		if (!GetJson("/api/v1/me/friends/requests", true, doc, out.error, "friend requests"))
-			return out;
-		if (doc.HasMember("incoming") && doc["incoming"].IsArray())
-			for (const auto& entry : doc["incoming"].GetArray())
-				out.incoming.push_back(ParseFriend(entry));
-		if (doc.HasMember("outgoing") && doc["outgoing"].IsArray())
-			for (const auto& entry : doc["outgoing"].GetArray())
-				out.outgoing.push_back(ParseFriend(entry));
-		out.ok = true;
+		}
+		for (const auto& entry : graph.friends)
+			out.first.friends.push_back(FromLibrary(entry));
+		for (const auto& entry : graph.requests)
+			(entry.incoming ? out.second.incoming : out.second.outgoing).push_back(FromLibrary(entry));
+		out.first.ok = out.second.ok = true;
 		return out;
 	}
 
 	InvitationList GetInvitations()
 	{
+		OpenPakClient::Init();
 		InvitationList out;
-		rapidjson::Document doc;
-		if (!GetJson("/api/v1/me/invitations", true, doc, out.error, "invitations"))
-			return out;
-		if (doc.HasMember("invitations") && doc["invitations"].IsArray())
+		if (!OpenPakAccount::IsSignedIn())
 		{
-			for (const auto& entry : doc["invitations"].GetArray())
-			{
-				if (!entry.IsObject())
-					continue;
-				Invitation inv;
-				inv.invitation_id = JsonString(entry, "invitation_id");
-				inv.from = JsonString(entry, "from");
-				inv.title_id = ToUpper(JsonString(entry, "title_id"));
-				inv.expires_at = JsonString(entry, "expires_at");
-				out.invitations.push_back(inv);
-			}
+			out.error = OpenPakError::NotSignedIn;
+			return out;
 		}
+		for (const auto& inv : Api::GetInvitations())
+			out.invitations.push_back({inv.id, inv.from, ToUpper(inv.title_id), inv.expires_at});
 		out.ok = true;
 		return out;
 	}
 
 	std::string AcceptFriend(const std::string& account_id)
 	{
-		return PostAccount("/api/v1/me/friends/requests/accept", account_id, "accept friend");
+		OpenPakClient::Init();
+		return OpenPakError::FromLibrary(Api::AcceptFriendRequest(Request(account_id)));
 	}
 
-	// The website API has no separate decline: removing a pending request is the
-	// decline (the core ends a pending friendship in either direction).
+	// The website API has no separate decline: removing a pending request is the decline (the
+	// core ends a pending friendship in either direction).
 	std::string DeclineFriend(const std::string& account_id)
 	{
-		return PostAccount("/api/v1/me/friends/remove", account_id, "decline friend");
+		OpenPakClient::Init();
+		return OpenPakError::FromLibrary(Api::DeclineFriendRequest(Request(account_id)));
 	}
 
 	std::string RemoveFriend(const std::string& account_id)
 	{
-		return PostAccount("/api/v1/me/friends/remove", account_id, "remove friend");
+		OpenPakClient::Init();
+		return OpenPakError::FromLibrary(Api::RemoveAccountFriend(account_id));
 	}
 
 	std::string BlockFriend(const std::string& account_id)
 	{
-		return PostAccount("/api/v1/me/friends/block", account_id, "block");
+		OpenPakClient::Init();
+		return OpenPakError::FromLibrary(Api::BlockAccount(account_id));
 	}
 
 	std::string SendFriendRequest(const std::string& friend_code)
 	{
-		std::string bearer, error;
-		if (!GetBearerOr(bearer, error))
-			return error;
-		const auto resp = Request("POST", ApiBase() + "/api/v1/me/friends/requests",
-			JsonBody("friend_code", friend_code), bearer);
-		if (!resp.error.empty() || (resp.status != 200 && resp.status != 201))
-			return ErrorFor(resp, "friend request");
-		return {};
+		OpenPakClient::Init();
+		return OpenPakError::FromLibrary(Api::SendFriendRequest(friend_code));
 	}
 
 	Profile GetProfile()
 	{
+		OpenPakClient::Init();
 		Profile out;
-		rapidjson::Document doc;
-		if (!GetJson("/api/v1/me", true, doc, out.error, "profile"))
-			return out;
-		out.account_id = JsonString(doc, "account_id");
-		out.display_name = JsonString(doc, "display_name");
-		out.friend_code = JsonString(doc, "friend_code");
-		if (doc.HasMember("linked_platforms") && doc["linked_platforms"].IsArray())
+		const auto profile = Api::GetProfile();
+		if (!profile.ok)
 		{
-			for (const auto& platform : doc["linked_platforms"].GetArray())
-			{
-				const std::string ns = JsonString(platform, "namespace");
-				if (!ns.empty())
-					out.linked_platforms.push_back(ns);
-			}
+			out.error = OpenPakError::FromLibrary(profile.error);
+			return out;
 		}
 		out.ok = true;
+		out.account_id = profile.account_id;
+		out.display_name = profile.name;
+		out.friend_code = profile.friend_code;
+		out.linked_platforms = profile.linked_platforms;
 		return out;
 	}
 
 	std::optional<std::vector<uint8_t>> GetAvatar(const std::string& account_id)
 	{
-		if (!IsTameId(account_id))
-			return std::nullopt;
-		return FetchPublic(fmt::format("/media/avatars/{}/256", account_id));
-	}
-
-	namespace
-	{
-		std::mutex s_catalogueMutex;
-		std::map<std::string, CatalogueTitle> s_catalogue;
+		OpenPakClient::Init();
+		return Api::GetAccountAvatar(account_id);
 	}
 
 	std::map<std::string, CatalogueTitle> GetCatalogueIfLoaded()
@@ -358,181 +167,105 @@ namespace OpenPakSocial
 
 	std::map<std::string, CatalogueTitle> GetCatalogue()
 	{
-		auto& s_mutex = s_catalogueMutex;
 		{
-			std::lock_guard lock(s_mutex);
+			std::lock_guard lock(s_catalogueMutex);
 			if (!s_catalogue.empty())
 				return s_catalogue;
 		}
+		OpenPakClient::Init();
 		std::map<std::string, CatalogueTitle> out;
-		rapidjson::Document doc;
-		std::string error;
-		if (!GetJson("/api/v1/titles", false, doc, error, "catalogue"))
-			return out;
-		if (doc.HasMember("titles") && doc["titles"].IsArray())
-		{
-			for (const auto& title : doc["titles"].GetArray())
-			{
-				const std::string id = ToUpper(JsonString(title, "title_id"));
-				if (!id.empty())
-					out[id] = {JsonString(title, "name"), JsonString(title, "console")};
-			}
-		}
-		std::lock_guard lock(s_mutex);
+		for (const auto& [id, title] : Api::Catalogue())
+			out[id] = {title.name, title.console};
+		std::lock_guard lock(s_catalogueMutex);
 		s_catalogue = out;
 		return out;
 	}
 
 	CloudSaves GetCloudSaves()
 	{
+		OpenPakClient::Init();
 		CloudSaves out;
-		rapidjson::Document doc;
-		if (!GetJson("/api/v1/me/saves", true, doc, out.error, "cloud saves"))
+		const auto saves = Api::GetCloudSaves();
+		if (!saves.ok)
+		{
+			out.error = OpenPakError::FromLibrary(saves.error);
 			return out;
-		if (doc.HasMember("usage") && doc["usage"].IsObject())
-		{
-			out.used = JsonUint(doc["usage"], "allowance_used");
-			out.allowance = JsonUint(doc["usage"], "allowance");
-		}
-		if (doc.HasMember("saves") && doc["saves"].IsArray())
-		{
-			for (const auto& item : doc["saves"].GetArray())
-			{
-				CloudSave save;
-				save.platform = JsonString(item, "platform");
-				save.title_id = ToUpper(JsonString(item, "title_id"));
-				save.name = JsonString(item, "name");
-				if (item.HasMember("versions") && item["versions"].IsArray())
-				{
-					for (const auto& v : item["versions"].GetArray())
-						save.versions.push_back({(int)JsonInt(v, "number"), JsonBool(v, "conflict"), JsonUint(v, "size"),
-												 JsonString(v, "device"), JsonString(v, "saved_at")});
-				}
-				std::stable_sort(save.versions.begin(), save.versions.end(),
-					[](const SaveVersion& a, const SaveVersion& b) { return a.number > b.number; });
-				out.saves.push_back(std::move(save));
-			}
 		}
 		out.ok = true;
+		out.used = saves.allowance_used;
+		out.allowance = saves.allowance;
+		for (const auto& item : saves.saves)
+		{
+			CloudSave save{item.platform, ToUpper(item.title_id), item.name, {}};
+			for (const auto& v : item.versions) // newest first already
+				save.versions.push_back({v.number, v.conflict, v.size, v.device, v.saved_at});
+			out.saves.push_back(std::move(save));
+		}
 		return out;
 	}
 
 	ModList GetMods(const std::string& title_id)
 	{
+		OpenPakClient::Init();
 		ModList out;
-		if (!IsTameId(title_id))
-		{
-			out.ok = true;
-			return out;
-		}
-		rapidjson::Document doc;
-		if (!GetJson(fmt::format("/api/v1/titles/{}/mods", ToLower(title_id)), false, doc, out.error, "mods"))
-			return out;
-		if (doc.HasMember("mods") && doc["mods"].IsArray())
-		{
-			for (const auto& item : doc["mods"].GetArray())
-				out.mods.push_back({JsonString(item, "id"), JsonString(item, "name"), JsonString(item, "version"),
-									JsonString(item, "author"), JsonString(item, "licence"), JsonString(item, "summary")});
-		}
 		out.ok = true;
+		for (const auto& mod : Api::GetMods(title_id))
+			out.mods.push_back({mod.id, mod.name, mod.version, mod.author, mod.licence, mod.summary});
 		return out;
 	}
 
 	std::vector<std::string> GetFavouriteModIds()
 	{
-		std::vector<std::string> out;
-		rapidjson::Document doc;
-		std::string error;
-		if (OpenPakAccount::GetBearer().empty() || !GetJson("/api/v1/me/favourites", true, doc, error, "favourites"))
-			return out;
-		if (doc.HasMember("favourites") && doc["favourites"].IsArray())
-			for (const auto& item : doc["favourites"].GetArray())
-				out.push_back(JsonString(item, "id"));
-		return out;
+		OpenPakClient::Init();
+		return Api::GetFavouriteModIds();
 	}
 
 	std::string SetModFavourite(const std::string& mod_id, bool favourite)
 	{
-		std::string bearer, error;
-		if (!GetBearerOr(bearer, error))
-			return error;
-		if (!IsTameId(mod_id))
-			return OpenPakError::Unreachable;
-		const auto resp = Request(favourite ? "PUT" : "DELETE", ApiBase() + "/api/v1/me/favourites/" + mod_id, {}, bearer);
-		if (!resp.error.empty() || resp.status / 100 != 2)
-			return ErrorFor(resp, "favourite");
-		return {};
+		OpenPakClient::Init();
+		if (!OpenPakAccount::IsSignedIn())
+			return OpenPakError::NotSignedIn;
+		if (Api::SetModFavourite(mod_id, favourite))
+			return {};
+		return OpenPakAccount::IsSignedIn() ? OpenPakError::Unreachable : OpenPakError::Expired;
 	}
 
 	Players GetPlayers()
 	{
+		OpenPakClient::Init();
+		const auto status = Api::GetStatus();
 		Players out;
-		rapidjson::Document doc;
-		std::string error;
-		if (!GetJson("/api/v1/status", false, doc, error, "status"))
-			return out;
-		out.ok = true;
-		out.players_online = (int)JsonInt(doc, "players_online");
-		auto read = [&doc](const char* list, const char* key, std::vector<std::pair<std::string, int>>& into) {
-			if (!doc.HasMember(list) || !doc[list].IsArray())
-				return;
-			for (const auto& row : doc[list].GetArray())
-				into.emplace_back(JsonString(row, key), (int)JsonInt(row, "players"));
-		};
-		read("titles", "title_id", out.titles);
-		read("networks", "namespace", out.networks);
+		out.ok = status.ok;
+		out.players_online = status.players_online;
+		out.titles = status.titles;
+		out.networks = status.networks;
 		return out;
 	}
 
 	ServiceStatus GetServiceStatus()
 	{
+		OpenPakClient::Init();
+		const auto status = Api::GetServiceStatus();
 		ServiceStatus out;
-		// The status page lives beside the site: https://status.<site host>.
-		const std::string base = ApiBase();
-		const auto authority = base.find("://");
-		out.url = authority == std::string::npos ? base : base.substr(0, authority + 3) + "status." + base.substr(authority + 3);
-		if (const char* env = getenv("OPENPAK_STATUS"); env && std::string_view(env).rfind("https://", 0) == 0)
-			out.url = env;
-		const auto resp = Request("GET", out.url + "/api/status", {}, {}, 10, true);
-		if (!resp.error.empty() || resp.status != 200)
-			return out;
-		rapidjson::Document doc;
-		if (doc.Parse(resp.body.c_str()).HasParseError() || !doc.IsObject())
-			return out;
-		// The status page encodes its own view struct, so the keys are Go's field names.
-		out.headline = JsonString(doc, "Headline");
-		out.summary = JsonString(doc, "Sub");
-		out.state = JsonString(doc, "State");
-		if (doc.HasMember("Groups") && doc["Groups"].IsArray())
-		{
-			for (const auto& group : doc["Groups"].GetArray())
-			{
-				if (!group.IsObject() || !group.HasMember("Services") || !group["Services"].IsArray())
-					continue;
-				for (const auto& service : group["Services"].GetArray())
-					out.services.push_back({JsonString(service, "Name"), JsonBool(service, "Up"),
-											JsonDouble(service, "Uptime"), JsonString(service, "Latency")});
-			}
-		}
-		out.ok = true;
+		out.ok = status.ok;
+		out.url = status.url;
+		out.headline = status.headline;
+		out.summary = status.sub;
+		out.state = status.state;
+		for (const auto& s : status.services)
+			out.services.push_back({s.name, s.up, s.uptime, s.latency});
 		return out;
-	}
-
-	std::optional<int> PingUrl(const std::string& url)
-	{
-		const auto start = std::chrono::steady_clock::now();
-		const auto resp = Request("GET", url, {}, {}, 5);
-		if (!resp.error.empty() || resp.status == 0)
-			return std::nullopt;
-		return (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
 	}
 
 	std::optional<int> PingWebsite()
 	{
-		const auto start = std::chrono::steady_clock::now();
-		const auto resp = Request("GET", ApiBase() + "/healthz", {}, {}, 5);
-		if (!resp.error.empty() || resp.status != 200)
-			return std::nullopt;
-		return (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+		OpenPakClient::Init();
+		return Api::PingBackend();
+	}
+
+	std::optional<int> PingUrl(const std::string& url)
+	{
+		OpenPakClient::Init();
+		return Api::PingUrl(url);
 	}
 } // namespace OpenPakSocial

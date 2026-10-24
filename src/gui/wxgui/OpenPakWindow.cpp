@@ -435,7 +435,8 @@ class FriendsPage : public OpenPakPage
 	void Load() override
 	{
 		Run([]() {
-				Data data{OpenPakSocial::GetFriends(), OpenPakSocial::GetRequests()};
+				auto graph = OpenPakSocial::GetFriendsAndRequests();
+				Data data{std::move(graph.first), std::move(graph.second)};
 				OpenPakSocial::GetCatalogue(); // game names for "Playing {game}"
 				return data;
 			},

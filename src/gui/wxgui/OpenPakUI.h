@@ -107,10 +107,7 @@ namespace OpenPakUI
 	void StopPoller();
 
 	// The signed-ceiling change notice (docs/signed-ceiling.md, rule 4): hooks the network
-	// profile's change listener to one OPENPAK toast per new effective wiiu set, and starts the
-	// six-hour (±10 %) re-check. Once, after SetHost.
+	// profile's change listener to one OPENPAK toast per new effective wiiu set. The six-hour
+	// (±10 %) re-check is the client library's. Once, after SetHost.
 	void StartNetworkWatch();
-
-	// Re-fetches the ceiling and the profile off the UI thread (the timer, after a sign-in).
-	void RecheckNetwork();
 }

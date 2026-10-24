@@ -268,4 +268,11 @@ if (NOT ZArchive_FOUND)
 	add_subdirectory("dependencies/ZArchive" EXCLUDE_FROM_ALL)
 endif()
 
+# OpenPak: the shared client library (github.com/openpak/openpak-client): account file, website
+# API, network profile and signed ceiling. Only its client/ part; Quay's UI is wxWidgets, so the
+# library's Qt dialogs are not built.
+set(OPENPAK_BUILD_QT OFF CACHE BOOL "" FORCE)
+add_subdirectory("dependencies/openpak-client" EXCLUDE_FROM_ALL)
+set_property(TARGET openpak_client PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 add_subdirectory(src)

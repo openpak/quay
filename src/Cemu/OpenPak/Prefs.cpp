@@ -1,6 +1,9 @@
 #include "Cemu/OpenPak/Prefs.h"
+#include "Cemu/OpenPak/Client.h"
 
 #include "config/ActiveSettings.h"
+
+#include <openpak/api.h>
 
 #include <fmt/core.h>
 
@@ -123,12 +126,22 @@ namespace OpenPakPrefs
 
 	std::string ApiBase()
 	{
+		OpenPakClient::Init(); // the library's base is fixed by its first use
+		return WebService::OpenPakApi::BaseUrl();
+	}
+
+	void ExportWebsite()
+	{
 		if (const char* env = getenv("OPENPAK_API"); env && IsAcceptableBase(env))
-			return TrimSlash(env);
-		const std::string website = Website();
-		if (IsAcceptableBase(website))
-			return TrimSlash(website);
-		return kDefaultWebsite;
+			return;
+		const std::string website = TrimSlash(Website());
+		if (!IsAcceptableBase(website) || website == kDefaultWebsite)
+			return;
+#if BOOST_OS_WINDOWS
+		_putenv_s("OPENPAK_API", website.c_str());
+#else
+		setenv("OPENPAK_API", website.c_str(), 1);
+#endif
 	}
 
 	std::string DeviceName() { return Get("device_name"); }

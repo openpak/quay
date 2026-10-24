@@ -4,6 +4,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 // OpenPak: what the OpenPak window shows, from the website (emulators/prds/emulator-integration-prd.md
@@ -12,7 +13,8 @@
 // the catalogue, cloud saves, mods and the network status. In-game friends, notifications and
 // invitations ride NEX (nn-friends) and land in the same graph, so this is what the games see.
 //
-// Everything here blocks on the network: run it off the GUI thread. Errors are OpenPakError
+// Everything here goes through the shared client library (openpak-client) and blocks on the
+// network: run it off the GUI thread. Errors are OpenPakError
 // codes (Errors.h); an empty error means success.
 namespace OpenPakSocial
 {
@@ -141,8 +143,8 @@ namespace OpenPakSocial
 		std::vector<ServiceCheck> services;
 	};
 
-	FriendList GetFriends();
-	RequestList GetRequests();
+	// The friend list and the pending requests, from one look at the account's friend graph.
+	std::pair<FriendList, RequestList> GetFriendsAndRequests();
 	InvitationList GetInvitations();
 	std::string AcceptFriend(const std::string& account_id);
 	std::string DeclineFriend(const std::string& account_id);
