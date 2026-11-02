@@ -8,9 +8,44 @@
 #include "config/ActiveSettings.h"
 #include "util/helpers/StringHelpers.h"
 #include "util/highresolutiontimer/HighResolutionTimer.h"
+#include "Common/socket.h"
+#if BOOST_OS_UNIX
+#include <arpa/inet.h>
+#endif
+#include <openpak/network_profile.h>
 
 namespace NAPI
 {
+
+// Resolve a nex_token host to an IPv4 literal. ACTNexToken.host is console
+// ABI (16 bytes incl. NUL in napi.h): IPv4 literals always fit, DNS names
+// usually do not. Returns "" when the name has no IPv4 address.
+static std::string ResolveIPv4Literal(std::string_view host)
+{
+	std::string name(host);
+	struct addrinfo hints = {};
+	hints.ai_family = AF_INET;
+	struct addrinfo* addrs = nullptr;
+	if (getaddrinfo(name.c_str(), nullptr, &hints, &addrs) != 0 || !addrs)
+		return {};
+	char addrstr[NI_MAXHOST] = {};
+	getnameinfo(addrs->ai_addr, addrs->ai_addrlen, addrstr, sizeof(addrstr), nullptr, 0, NI_NUMERICHOST);
+	freeaddrinfo(addrs);
+	return std::string(addrstr);
+}
+
+// True for IPv4/IPv6 literals. Those pass the ceiling unchecked: today's
+// servers rows serve literals, and a literal matches no domain family by
+// construction. DNS names go through NameAllowed below instead.
+static bool IsIpLiteral(std::string_view host)
+{
+	std::string name(host);
+	struct in_addr v4 = {};
+	struct in6_addr v6 = {};
+	return inet_pton(AF_INET, name.c_str(), &v4) == 1 ||
+		inet_pton(AF_INET6, name.c_str(), &v6) == 1;
+}
+
 	std::string _getACTUrl(NetworkService service)
 	{
 		switch (service)
@@ -374,17 +409,56 @@ namespace NAPI
 		std::string_view token = tokenNode.child_value("token");
 
 		memset(&result.nexToken, 0, sizeof(ACTNexToken));
+		// On the OpenPak service, a DNS name from the servers row must sit
+		// inside this platform's signed ceiling, like every other name Quay
+		// addresses: a row pointing outside it fails the token rather than
+		// leaking the NEX credentials to an unexpected host. Checked before
+		// resolving so a name cannot launder itself through its address.
+		// Other services keep their own trust (a Custom setup is custom
+		// hosts by definition).
+		if (authInfo.GetService() == NetworkService::OpenPak &&
+			!IsIpLiteral(host) && !openpak::NetworkProfile::NameAllowed(std::string(host), "wiiu"))
+		{
+			cemuLog_log(LogType::Force, "NexToken response: host '{}' is outside this platform's ceiling", host);
+			result.apiError = NAPI_RESULT::FAILED;
+			return result;
+		}
+		// host[] holds 15 chars + NUL and is console ABI, so a longer name is
+		// resolved to its IPv4 literal here. Anything still too long (or
+		// unresolvable) fails the token: connecting to a truncated host (or
+		// with a truncated password/token) can never authenticate, so a
+		// clear error beats silent garbage.
+		std::string resolvedHost;
+		std::string_view hostField = host;
 		if (host.size() > 15)
-			cemuLog_log(LogType::Force, "NexToken response: host field too long");
+		{
+			resolvedHost = ResolveIPv4Literal(host);
+			if (resolvedHost.empty() || resolvedHost.size() > 15)
+			{
+				cemuLog_log(LogType::Force, "NexToken response: host '{}' does not fit and has no usable IPv4 address", host);
+				result.apiError = NAPI_RESULT::FAILED;
+				return result;
+			}
+			cemuLog_log(LogType::Force, "NexToken response: resolved host '{}' to {}", host, resolvedHost);
+			hostField = resolvedHost;
+		}
 		if (nex_password.size() > 64)
+		{
 			cemuLog_log(LogType::Force, "NexToken response: nex_password field too long");
+			result.apiError = NAPI_RESULT::FAILED;
+			return result;
+		}
 		if (token.size() > 512)
+		{
 			cemuLog_log(LogType::Force, "NexToken response: token field too long");
-		for (size_t i = 0; i < std::min(host.size(), (size_t)15); i++)
-			result.nexToken.host[i] = host[i];
-		for (size_t i = 0; i < std::min(nex_password.size(), (size_t)64); i++)
+			result.apiError = NAPI_RESULT::FAILED;
+			return result;
+		}
+		for (size_t i = 0; i < hostField.size(); i++)
+			result.nexToken.host[i] = hostField[i];
+		for (size_t i = 0; i < nex_password.size(); i++)
 			result.nexToken.nexPassword[i] = nex_password[i];
-		for (size_t i = 0; i < std::min(token.size(), (size_t)512); i++)
+		for (size_t i = 0; i < token.size(); i++)
 			result.nexToken.token[i] = token[i];
 		result.nexToken.port = (uint16)StringHelpers::ToInt(port);
 		result.apiError = NAPI_RESULT::SUCCESS;
