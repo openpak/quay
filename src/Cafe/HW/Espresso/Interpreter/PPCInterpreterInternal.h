@@ -198,6 +198,7 @@ void fcmpu_espresso(PPCInterpreter_t* hCPU, int crfD, double a, double b);
 
 // OPC
 void PPCInterpreter_virtualHLE(PPCInterpreter_t* hCPU, unsigned int opcode);
+void PPCInterpreter_logUnsupportedHLECall(PPCInterpreter_t* hCPU);
 
 void PPCInterpreter_MFMSR(PPCInterpreter_t* hCPU, uint32 Opcode);
 void PPCInterpreter_MTMSR(PPCInterpreter_t* hCPU, uint32 Opcode);

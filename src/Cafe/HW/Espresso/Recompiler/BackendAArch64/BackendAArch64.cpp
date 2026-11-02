@@ -892,8 +892,7 @@ void* PPCRecompiler_virtualHLE(PPCInterpreter_t* ppcInterpreter, uint32 hleFuncI
 	if (hleFuncId == 0xFFD0)
 	{
 		ppcInterpreter->remainingCycles -= 500; // let subtract about 500 cycles for each HLE call
-		ppcInterpreter->gpr[3] = 0;
-		PPCInterpreter_nextInstruction(ppcInterpreter);
+		PPCInterpreter_logUnsupportedHLECall(ppcInterpreter); // logs once per export, then returns 0 as before
 		return PPCInterpreter_getCurrentInstance();
 	}
 	else

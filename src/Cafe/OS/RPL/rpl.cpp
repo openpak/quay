@@ -792,6 +792,12 @@ uint32 rpl_mapHLEImport(RPLModule* rplLoaderContext, const char* rplName, const 
 		if (functionMustExist == false)
 			return MPTR_NULL;
 	}
+	// Full upfront list in debug builds only: titles routinely import exports
+	// they never call (NSMBU imports 92), so release builds stay quiet here
+	// and the call-time "Unsupported lib call" line (always on, all CPU
+	// paths) carries the true work queue instead. One line per unique import
+	// (repeat imports return early above), naming the importer.
+	cemuLog_logDebug(LogType::Force, "RPLLoader: missing HLE export \"{}.{}\" (imported by \"{}\")", libName, funcName, rplLoaderContext ? rplLoaderContext->moduleName : std::string("?"));
 	// create code for unsupported import
 	uint32 codeStart = memory_getVirtualOffsetFromPointer(RPLLoader_AllocateTrampolineCodeSpace(256));
 	uint32 currentAddress = codeStart;
@@ -1979,7 +1985,7 @@ void RPLLoader_AddDependency(std::string_view name, bool isMainExecutable)
 			isBlacklisted = true;
 	}
 	if (isBlacklisted)
-		cemuLog_log(LogType::Force, "Game tried to load {}.rpl from cafeLibs/ but the necessary MLC data files are not present. Using Cemu's implementation instead", moduleName);
+		cemuLog_log(LogType::Force, "Game tried to load {}.rpl from cafeLibs/ but the necessary MLC data files are not present. Using Quay's implementation instead", moduleName);
 	if (!rplExistsInCafeLibs || isBlacklisted)
 		newDependency->rplHLEModule = RPLLoader_GetHLECafeOSModule(moduleName);
 	s_rplDependencyList.push_back(newDependency);

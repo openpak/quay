@@ -159,8 +159,7 @@ void* ATTR_MS_ABI PPCRecompiler_virtualHLE(PPCInterpreter_t* hCPU, uint32 hleFun
 	if( hleFuncId == 0xFFD0 )
 	{
 		hCPU->remainingCycles -= 500; // let subtract about 500 cycles for each HLE call
-		hCPU->gpr[3] = 0;
-		PPCInterpreter_nextInstruction(hCPU);
+		PPCInterpreter_logUnsupportedHLECall(hCPU); // logs once per export, then returns 0 as before
 		return hCPU;
 	}
 	else

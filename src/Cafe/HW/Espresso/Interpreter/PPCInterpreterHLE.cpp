@@ -10,7 +10,10 @@ void PPCInterpreter_handleUnsupportedHLECall(PPCInterpreter_t* hCPU)
 	std::string tempString = fmt::format("Unsupported lib call: {}", libFuncName);
 	if (s_unsupportedHLECalls.find(tempString) == s_unsupportedHLECalls.end())
 	{
-		cemuLog_log(LogType::UnsupportedAPI, "{}", tempString);
+		// Always visible: a called-but-unimplemented HLE export silently
+		// returns 0, which is never correct behaviour. One line per unique
+		// export; title bring-up greps log.txt for exactly this.
+		cemuLog_log(LogType::Force, "{}", tempString);
 		s_unsupportedHLECalls.emplace(tempString);
 	}
 	hCPU->gpr[3] = 0;
@@ -53,14 +56,20 @@ HLECALL PPCInterpreter_getHLECall(HLEIDX funcIndex)
 
 std::mutex s_hleLogMutex;
 
+// Locked wrapper for recompiler backends, which run on CPU threads outside
+// the interpreter's own locking.
+void PPCInterpreter_logUnsupportedHLECall(PPCInterpreter_t* hCPU)
+{
+	std::lock_guard _l(s_hleLogMutex);
+	PPCInterpreter_handleUnsupportedHLECall(hCPU);
+}
+
 void PPCInterpreter_virtualHLE(PPCInterpreter_t* hCPU, unsigned int opcode)
 {
 	uint32 hleFuncId = opcode & 0xFFFF;
 	if (hleFuncId == 0xFFD0) [[unlikely]]
 	{
-		s_hleLogMutex.lock();
-		PPCInterpreter_handleUnsupportedHLECall(hCPU);
-		s_hleLogMutex.unlock();
+		PPCInterpreter_logUnsupportedHLECall(hCPU);
 	}
 	else
 	{
