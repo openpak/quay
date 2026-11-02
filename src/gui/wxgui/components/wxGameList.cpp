@@ -169,7 +169,7 @@ wxGameList::wxGameList(wxWindow* parent, wxWindowID id)
 
 	m_tooltip_window = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
 	auto* tooltip_sizer = new wxBoxSizer(wxVERTICAL);
-	tooltip_sizer->Add(new wxStaticText(m_tooltip_window, wxID_ANY, _("This game entry seems to be either an update or the base game was merged with update data\nBroken game dumps cause various problems during emulation and may even stop working at all in future Cemu versions\nPlease make sure the base game is intact and install updates only with the File->Install Update/DLC option")), 0, wxALL, 5);
+	tooltip_sizer->Add(new wxStaticText(m_tooltip_window, wxID_ANY, _("This game entry seems to be either an update or the base game was merged with update data\nBroken game dumps cause various problems during emulation and may even stop working at all in future Quay versions\nPlease make sure the base game is intact and install updates only with the File->Install Update/DLC option")), 0, wxALL, 5);
 	m_tooltip_window->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_INFOBK));
 	m_tooltip_window->SetSizerAndFit(tooltip_sizer);
 	m_tooltip_window->Hide();
@@ -1472,7 +1472,7 @@ void wxGameList::CreateShortcut(GameInfo2& gameInfo)
 	auto desktopEntryString = fmt::format(
 		"[Desktop Entry]\n"
 		"Name={0}\n"
-		"Comment=Play {0} on Cemu\n"
+		"Comment=Play {0} on Quay\n"
 		"Exec={1}\n"
 		"Icon={2}\n"
 		"Terminal=false\n"
@@ -1679,7 +1679,7 @@ void wxGameList::CreateShortcut(GameInfo2& gameInfo)
 	HRESULT hres = CoCreateInstance(__uuidof(ShellLink), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
 	if (SUCCEEDED(hres))
 	{
-		const auto description = wxString::Format("Play %s on Cemu", titleName);
+		const auto description = wxString::Format("Play %s on Quay", titleName);
 		const auto args = wxString::Format("-t %016llx", titleId);
 
 		shellLink->SetPath(exePath.wstring().c_str());

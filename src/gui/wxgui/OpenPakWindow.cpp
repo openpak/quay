@@ -628,7 +628,7 @@ class SavesPage : public OpenPakPage
 		m_top->Add(m_usage, 0, wxBOTTOM, FromDIP(4));
 		// S-1 (Wii U save sync) has no backend in Cemu yet: say so rather than offer buttons
 		// that do nothing.
-		m_top->Add(Text(this, _("Cemu does not upload or download Wii U saves yet. This is what your account holds in the cloud."), false, true),
+		m_top->Add(Text(this, _("Quay does not upload or download Wii U saves yet. This is what your account holds in the cloud."), false, true),
 			0, wxBOTTOM, FromDIP(6));
 	}
 

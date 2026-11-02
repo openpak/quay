@@ -1,6 +1,6 @@
-# Cemu for OpenPak
+# Quay for OpenPak
 
-Fork of upstream Cemu with two additions: a way to point the emulated console at OpenPak —
+Quay is OpenPak's Wii U emulator, forked from upstream Cemu, with two additions: a way to point the emulated console at OpenPak —
 including signing in to an OpenPak account, which mints and installs the console identity so
 online works with no console dump — and the OpenPak menu, window and settings every OpenPak
 emulator shares (`emulators/prds/openpak-ux-spec.md`, Wii U family). Everything else is
@@ -14,7 +14,7 @@ OpenPak's Wii U adapter and content services answer. TLS verification is off for
 like for Pretendo, because the host's trust store does not hold the OpenPak CA. Saved per
 account as service index 4.
 
-The service URLs are not only compiled in: at launch Cemu fetches the OpenPak **network
+The service URLs are not only compiled in: at launch Quay fetches the OpenPak **network
 profile** (`GET <website>/api/v1/network/profile?platform=wiiu`, one conditional GET,
 two-second timeout — emulators/prds/emulator-network-profile-prd.md) and fills the ten URLs
 from its `services[]` by id. A service the profile does not name keeps its compiled-in URL; a
@@ -28,7 +28,7 @@ keeps what is Wii U's alone: the identity it writes into the emulated console, t
 device identity, the service URLs by id, and the wx UI's error codes.
 
 **Signed redirect ceiling** (`docs/signed-ceiling.md`, done by openpak-client). The
-domain families Cemu may address are no longer only compiled in: alongside the profile Cemu
+domain families Quay may address are no longer only compiled in: alongside the profile Quay
 fetches `https://openpak.org/api/v1/network/ceiling` (pinned origin, public TLS, two seconds, in
 parallel with the profile), verifies the Ed25519 signature over the payload bytes with OpenSSL
 (`EVP_PKEY_ED25519`) under the pinned key list, refuses a version below the highest one accepted
@@ -69,7 +69,7 @@ services go into the digest, so a Switch change never notifies.
     requests on the page entry.
   - *Invitations*: read-only (the game that sent an invitation accepts it), every thirty seconds.
   - *Cloud saves*: what the account holds in the cloud for Wii U titles, with usage, versions and
-    what this machine has. **Cemu does not sync Wii U saves yet** (S-1): no Upload, Download or
+    what this machine has. **Quay does not sync Wii U saves yet** (S-1): no Upload, Download or
     Resolve, and the page says so.
   - *Mods*: the catalogue's mods for a Wii U title (local titles and the catalogue; the running
     game by default), with Favourite. **Installing graphic packs from OpenPak is not in this
@@ -78,7 +78,7 @@ services go into the digest, so a Switch change never notifies.
   - *Status*: the status page's verdict and services, players online per title and network,
     and this session (account, console link, console edge, presence, a Ping test).
 - **Sign-in** (`src/gui/wxgui/OpenPakUI.cpp`): Email, Password and a Device name (default
-  "Cemu on {machine}", sent as `device_name` so the account's device list tells machines apart),
+  "Quay on {machine}", sent as `device_name` so the account's device list tells machines apart),
   *Create an account*, errors inline, off the UI thread. Success installs the account's Wii U
   identity (below) and shows a toast. **Sign out** is confirmed, revokes the token in the
   background and leaves the Mii account alone. A first interactive launch with no game asks
@@ -94,7 +94,7 @@ services go into the digest, so a Switch change never notifies.
   open the page: signed in, signed out, sign-in expired, and — from a poller while signed in —
   friends coming online or starting a game, friend requests and game invitations (the first poll
   is silent). While a game runs, the render canvas covers child windows, so the same text goes
-  to Cemu's own overlay notification instead.
+  to Quay's own overlay notification instead.
 - OpenPak settings that are not per account live in `config/openpak_settings.txt`.
 
 ## The account and the Wii U identity
@@ -107,7 +107,7 @@ account** (UX spec §5.10): the one it used first, remembered as `slot` in
 `config/openpak_settings.txt` (or, after an older build, the one already holding the PID); a new
 Mii account is created only when there is none. Sign-out keeps that Mii account. No
 otp.bin/seeprom.bin dump and no MLC certificate store are needed on this service: when they are
-absent, Cemu synthesises a device identity once and reuses it (the adapter checks certificates
+absent, Quay synthesises a device identity once and reuses it (the adapter checks certificates
 structurally only), and the online check re-runs right after sign-in, so no restart is needed. A
 console dump that exists is never replaced. The website sign-in lives in the library's account
 file, `config/openpak_account.txt` (bearer-only, as every non-Switch OpenPak emulator keeps it);

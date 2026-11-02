@@ -9,14 +9,16 @@ an official Cemu release.
 
 ## Status
 
-**Status:** Early (not yet built or run)
+**Status:** Early (Gate 0 landed; builds and runs games as Quay)
 
-Read this before anything else: this repository is currently a copy of the
-retired OpenPak Cemu fork. The code is still Cemu-branded, the rename (Gate 0
-in the plan) has not landed, and no Quay-specific emulation exists yet. Quay is
-now OpenPak's only Wii U emulator; the Cemu fork
-([openpak/cemu](https://github.com/openpak/cemu)) is retired. Nothing here has
-been built or booted as Quay.
+Read this before anything else: this repository is the renamed OpenPak Cemu
+fork. The user-visible rename (Gate 0 in the plan) has landed — the project
+builds a `Quay` binary, the app identity, desktop entry, installer and release
+titles all say Quay — but no Quay-specific emulation exists yet. Quay is now
+OpenPak's only Wii U emulator; the Cemu fork
+([openpak/cemu](https://github.com/openpak/cemu)) is retired. Quay builds on
+Linux and boots commercial games; no system title has booted yet (Gate 1
+measurement needs an owner firmware dump).
 
 ## Not affiliated
 
@@ -44,7 +46,18 @@ never will.
 
 ## Known limitations
 
-- The Cemu to Quay rename has not landed; all names and paths are Cemu's.
+- Gate 0 renamed the user-visible surface only. Internal names stay Cemu's for
+  now: `src/Cemu/`, the `Cemu*` library targets and classes, `cemuLog`, the
+  `CEMU_*` macros, and the `src/resource/cemu.*` file names.
+- The embedded and bundle icons are still Cemu's logo. The Quay artwork under
+  `packaging/` is AGPL-3.0-only and is distributed separately, never embedded
+  in the binary; Quay needs its own embeddable icon set before the Cemu logo
+  can go.
+- The Cemu self-updater is disabled: Help → Check for updates is off and the
+  update query never runs, so Quay never phones the Cemu update feed. Quay
+  releases come from this repository's releases page.
+- Discord Rich Presence still uses upstream's Discord application id; it needs
+  an OpenPak id before it reports Quay correctly.
 - No firmware boot path exists: no Wii U Menu, no Mii Maker, no firmware
   account flow.
 - Cemu-era limits carry over: Cloud saves and Mods pages are read-only, and the

@@ -1,6 +1,6 @@
 name: OpenPak release
 
-# Tag v1.2.3: builds Cemu for Linux, Windows and macOS with upstream's own build workflow
+# Tag v1.2.3: builds Quay for Linux, Windows and macOS with upstream's own build workflow
 # (GitHub-hosted runners; this repository is public). The release is created first and each
 # build job attaches its own zip to it, so nothing passes through workflow artifacts: the
 # organisation's artifact quota can be full and stop a release (2026-09-23).
@@ -21,7 +21,7 @@ jobs:
       - run: >
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag
-          --title "Cemu ${GITHUB_REF_NAME} (OpenPak)" --generate-notes
+          --title "Quay ${GITHUB_REF_NAME} (OpenPak)" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
   build:

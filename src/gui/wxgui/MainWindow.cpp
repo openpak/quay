@@ -840,7 +840,7 @@ void MainWindow::TogglePadView()
 
 #if ( BOOST_OS_LINUX || BOOST_OS_BSD ) && HAS_WAYLAND
 		if (wxWlIsWaylandWindow(m_padView))
-			wxWlSetAppId(m_padView, "info.cemu.Cemu");
+			wxWlSetAppId(m_padView, "org.openpak.quay");
 #endif
 
 		m_padView->Initialize();
@@ -912,7 +912,7 @@ void MainWindow::OpenSettings(bool openpakTab)
 		SetMenuVisible(false);
 
 	if (language != config.language)
-		wxMessageBox(_("Cemu must be restarted to apply the selected UI language."), _("Information"), wxOK | wxCENTRE, this); // TODO: change language to newly selected one
+		wxMessageBox(_("Quay must be restarted to apply the selected UI language."), _("Information"), wxOK | wxCENTRE, this); // TODO: change language to newly selected one
 }
 
 void MainWindow::OnOptionsInput(wxCommandEvent& event)
@@ -1925,7 +1925,7 @@ class CemuAboutDialog : public wxDialog
 {
 public:
 	CemuAboutDialog(wxWindow* parent = NULL)
-		: wxDialog(NULL, wxID_ANY, _("About Cemu"), wxDefaultPosition, wxSize(500, 700))
+		: wxDialog(NULL, wxID_ANY, _("About Quay"), wxDefaultPosition, wxSize(500, 700))
 	{
 		Create(parent);
 	}
@@ -1957,16 +1957,17 @@ public:
 
 	void AddHeaderInfo(wxWindow* parent, wxSizer* sizer)
 	{
-		auto versionString = formatWxString(_("Cemu\nVersion {0}\nCompiled on {1}\nOriginal authors: {2}"), BUILD_VERSION_STRING, BUILD_DATE, "Exzap, Petergov");
+		auto versionString = formatWxString(_("Quay\nVersion {0}\nCompiled on {1}\nBased on Quay by {2}"), BUILD_VERSION_STRING, BUILD_DATE, "Exzap, Petergov");
 
 		sizer->Add(new wxStaticText(parent, wxID_ANY, versionString), wxSizerFlags().Border(wxALL, 3).Border(wxTOP, 10));
+		sizer->Add(new wxHyperlinkCtrl(parent, wxID_ANY, "https://openpak.org", "https://openpak.org", wxDefaultPosition, wxDefaultSize, (wxHL_CONTEXTMENU|wxNO_BORDER|wxHL_ALIGN_LEFT)), wxSizerFlags().Expand().Border(wxTOP | wxBOTTOM, 3));
 		sizer->Add(new wxHyperlinkCtrl(parent, wxID_ANY, "https://cemu.info", "https://cemu.info", wxDefaultPosition, wxDefaultSize, (wxHL_CONTEXTMENU|wxNO_BORDER|wxHL_ALIGN_LEFT)), wxSizerFlags().Expand().Border(wxTOP | wxBOTTOM, 3));
 
 		sizer->AddSpacer(3);
 		sizer->Add(new wxStaticLine(parent), wxSizerFlags().Expand().Border(wxRIGHT, 4));
 		sizer->AddSpacer(5);
 
-		wxString extraInfo(_("Cemu is a Wii U emulator.\n\nWii and Wii U are trademarks of Nintendo.\nCemu is not affiliated with Nintendo."));
+		wxString extraInfo(_("Quay is a Wii U emulator by OpenPak, based on Quay.\n\nWii and Wii U are trademarks of Nintendo.\nQuay is not affiliated with Nintendo."));
 		sizer->Add(new wxStaticText(parent, wxID_ANY, extraInfo), wxSizerFlags());
 	}
 
@@ -2330,7 +2331,7 @@ void MainWindow::RecreateMenu()
 #endif
 	}
 
-	m_fileMenu->Append(MAINFRAME_MENU_ID_FILE_OPEN_CEMU_FOLDER, _("Open Cemu folder"));
+	m_fileMenu->Append(MAINFRAME_MENU_ID_FILE_OPEN_CEMU_FOLDER, _("Open Quay folder"));
 	m_fileMenu->Append(MAINFRAME_MENU_ID_FILE_OPEN_MLC_FOLDER, _("Open MLC folder"));
 	m_fileMenu->Append(MAINFRAME_MENU_ID_FILE_OPEN_SHADERCACHE_FOLDER, _("Open &shader cache folder"));
 	m_fileMenu->AppendSeparator();
@@ -2537,15 +2538,10 @@ void MainWindow::RecreateMenu()
 	// help menu
 	wxMenu* helpMenu = new wxMenu();
 	m_check_update_menu = helpMenu->Append(MAINFRAME_MENU_ID_HELP_UPDATE, _("&Check for updates"));
-#if BOOST_OS_LINUX
-	if (!std::getenv("APPIMAGE")) {
-		m_check_update_menu->Enable(false);
-	}
-#elif BOOST_OS_BSD // BSD users must update from source so disable update checks
+	// Quay releases come from openpak/quay; the upstream Cemu update feed must never run here.
 	m_check_update_menu->Enable(false);
-#endif
 	helpMenu->AppendSeparator();
-	helpMenu->Append(MAINFRAME_MENU_ID_HELP_ABOUT, _("&About Cemu"));
+	helpMenu->Append(MAINFRAME_MENU_ID_HELP_ABOUT, _("&About Quay"));
 
 	m_menuBar->Append(helpMenu, _("&Help"));
 

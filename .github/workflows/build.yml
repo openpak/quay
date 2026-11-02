@@ -1,4 +1,4 @@
-name: Build Cemu
+name: Build Quay
 
 on:
   workflow_call:
@@ -82,19 +82,19 @@ jobs:
       run: |
         cmake -S . -B build ${{ env.BUILD_FLAGS }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_MODE }} -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15 -G Ninja -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja
 
-    - name: "Build Cemu"
+    - name: "Build Quay"
       run: |
         cmake --build build
 
     - name: Prepare artifact
-      run: mv bin/Cemu_release bin/Cemu
+      run: mv bin/Quay_release bin/Quay
 
     - name: Upload artifact
       if: ${{ inputs.release_tag == '' }}
       uses: actions/upload-artifact@v6
       with:
-        name: cemu-bin-linux-${{ matrix.arch }}
-        path: ./bin/Cemu
+        name: quay-bin-linux-${{ matrix.arch }}
+        path: ./bin/Quay
         retention-days: 3
 
     - name: "Build AppImage (release)"
@@ -112,8 +112,8 @@ jobs:
         TAG: ${{ inputs.release_tag }}
       run: |
         mkdir -p upload
-        (cd bin && zip -q "../upload/cemu-bin-linux-${{ matrix.arch }}-${TAG}.zip" Cemu)
-        (cd artifacts && zip -q "../upload/cemu-appimage-${{ matrix.arch }}-${TAG}.zip" *.AppImage)
+        (cd bin && zip -q "../upload/quay-bin-linux-${{ matrix.arch }}-${TAG}.zip" Quay)
+        (cd artifacts && zip -q "../upload/quay-appimage-${{ matrix.arch }}-${TAG}.zip" *.AppImage)
         gh release upload "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --clobber
 
   build-appimage:
@@ -137,7 +137,7 @@ jobs:
 
     - uses: actions/download-artifact@v8
       with:
-        name: cemu-bin-linux-${{ matrix.arch }}
+        name: quay-bin-linux-${{ matrix.arch }}
         path: bin
 
     - name: "Install system dependencies"
@@ -154,7 +154,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v6
       with:
-        name: cemu-appimage-${{ matrix.arch }}
+        name: quay-appimage-${{ matrix.arch }}
         path: artifacts
         retention-days: 3
 
@@ -209,13 +209,13 @@ jobs:
         echo "[INFO] BUILD_MODE: ${{ env.BUILD_MODE }}"
         cmake .. ${{ env.BUILD_FLAGS }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_MODE }} -DVCPKG_INSTALL_OPTIONS="--clean-after-build"
 
-    - name: "Build Cemu"
+    - name: "Build Quay"
       run: |
         cd build
         cmake --build . --config ${{ env.BUILD_MODE }}
 
     - name: Prepare artifact
-      run: Rename-Item bin/Cemu_release.exe Cemu.exe
+      run: Rename-Item bin/Quay_release.exe Quay.exe
 
     - name: Build NSIS Installer
       shell: cmd
@@ -227,16 +227,16 @@ jobs:
       if: ${{ inputs.release_tag == '' }}
       uses: actions/upload-artifact@v6
       with:
-        name: cemu-bin-windows-x64
-        path: ./bin/Cemu.exe
+        name: quay-bin-windows-x64
+        path: ./bin/Quay.exe
         retention-days: 3
 
     - name: Upload NSIS Installer
       if: ${{ inputs.release_tag == '' }}
       uses: actions/upload-artifact@v6
       with:
-        name: cemu-installer-windows-x64
-        path: ./src/resource/cemu-${{ inputs.next_version_major }}.${{ inputs.next_version_minor }}-windows-x64-installer.exe
+        name: quay-installer-windows-x64
+        path: ./src/resource/quay-${{ inputs.next_version_major }}.${{ inputs.next_version_minor }}-windows-x64-installer.exe
         retention-days: 3
 
     - name: Attach to the release
@@ -247,8 +247,8 @@ jobs:
         TAG: ${{ inputs.release_tag }}
       run: |
         mkdir -p upload
-        7z a "upload/cemu-bin-windows-x64-${TAG}.zip" ./bin/Cemu.exe >/dev/null
-        7z a "upload/cemu-installer-windows-x64-${TAG}.zip" ./src/resource/cemu-*-windows-x64-installer.exe >/dev/null
+        7z a "upload/quay-bin-windows-x64-${TAG}.zip" ./bin/Quay.exe >/dev/null
+        7z a "upload/quay-installer-windows-x64-${TAG}.zip" ./src/resource/quay-*-windows-x64-installer.exe >/dev/null
         gh release upload "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --clobber
 
   build-macos:
@@ -323,28 +323,28 @@ jobs:
         -DMACOS_BUNDLE=ON \
         -G Ninja
 
-    - name: "Build Cemu"
+    - name: "Build Quay"
       run: |
         cmake --build build
 
     - name: Prepare artifact
       run: |
-        mkdir bin/Cemu_app
-        mv bin/Cemu_release.app bin/Cemu_app/Cemu.app
-        mv bin/Cemu_app/Cemu.app/Contents/MacOS/Cemu_release bin/Cemu_app/Cemu.app/Contents/MacOS/Cemu
-        sed -i '' 's/Cemu_release/Cemu/g' bin/Cemu_app/Cemu.app/Contents/Info.plist
-        codesign --entitlements ${{github.workspace}}/src/resource/cemu.macos.entitlements --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - --timestamp --options runtime bin/Cemu_app/Cemu.app/Contents/MacOS/Cemu
-        ln -s /Applications bin/Cemu_app/Applications
-        hdiutil create ./bin/tmp.dmg -ov -volname "Cemu" -fs HFS+ -srcfolder "./bin/Cemu_app"
-        hdiutil convert ./bin/tmp.dmg -format UDZO -o bin/Cemu.dmg
+        mkdir bin/Quay_app
+        mv bin/Quay_release.app bin/Quay_app/Quay.app
+        mv bin/Quay_app/Quay.app/Contents/MacOS/Quay_release bin/Quay_app/Quay.app/Contents/MacOS/Quay
+        sed -i '' 's/Quay_release/Quay/g' bin/Quay_app/Quay.app/Contents/Info.plist
+        codesign --entitlements ${{github.workspace}}/src/resource/quay.macos.entitlements --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - --timestamp --options runtime bin/Quay_app/Quay.app/Contents/MacOS/Quay
+        ln -s /Applications bin/Quay_app/Applications
+        hdiutil create ./bin/tmp.dmg -ov -volname "Quay" -fs HFS+ -srcfolder "./bin/Quay_app"
+        hdiutil convert ./bin/tmp.dmg -format UDZO -o bin/Quay.dmg
         rm bin/tmp.dmg
 
     - name: Upload artifact
       if: ${{ inputs.release_tag == '' }}
       uses: actions/upload-artifact@v6
       with:
-        name: cemu-bin-macos-${{ matrix.arch }}
-        path: ./bin/Cemu.dmg
+        name: quay-bin-macos-${{ matrix.arch }}
+        path: ./bin/Quay.dmg
         retention-days: 3
 
     - name: Attach to the release
@@ -354,5 +354,5 @@ jobs:
         TAG: ${{ inputs.release_tag }}
       run: |
         mkdir -p upload
-        (cd bin && zip -q "../upload/cemu-bin-macos-${{ matrix.arch }}-${TAG}.zip" Cemu.dmg)
+        (cd bin && zip -q "../upload/quay-bin-macos-${{ matrix.arch }}-${TAG}.zip" Quay.dmg)
         gh release upload "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --clobber

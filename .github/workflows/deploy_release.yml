@@ -80,28 +80,28 @@ jobs:
           echo "RELEASE_BODY=$CHANGELOG" >> $GITHUB_ENV
       - uses: actions/download-artifact@v8
         with:
-          name: cemu-bin-linux-x64
-          path: cemu-bin-linux-x64
+          name: quay-bin-linux-x64
+          path: quay-bin-linux-x64
 
       - uses: actions/download-artifact@v8
         with:
-          name: cemu-appimage-x64
-          path: cemu-appimage-x64
+          name: quay-appimage-x64
+          path: quay-appimage-x64
 
       - uses: actions/download-artifact@v8
         with:
-          name: cemu-bin-windows-x64
-          path: cemu-bin-windows-x64
+          name: quay-bin-windows-x64
+          path: quay-bin-windows-x64
 
       - uses: actions/download-artifact@v8
         with:
-          name: cemu-installer-windows-x64
-          path: cemu-installer-windows-x64
+          name: quay-installer-windows-x64
+          path: quay-installer-windows-x64
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: cemu-bin-macos*
-          path: cemu-macos
+          pattern: quay-bin-macos*
+          path: quay-macos
 
       - name: Initialize
         run: |
@@ -111,54 +111,54 @@ jobs:
       - name: Set version dependent vars
         run: |
           echo "Version: ${{ needs.calculate-version.outputs.next_version }}"
-          echo "CEMU_FOLDER_NAME=Cemu_${{ needs.calculate-version.outputs.next_version }}"
-          echo "CEMU_VERSION=${{ needs.calculate-version.outputs.next_version }}"
-          echo "CEMU_FOLDER_NAME=Cemu_${{ needs.calculate-version.outputs.next_version }}" >> $GITHUB_ENV
-          echo "CEMU_VERSION=${{ needs.calculate-version.outputs.next_version }}" >> $GITHUB_ENV
+          echo "QUAY_FOLDER_NAME=Quay_${{ needs.calculate-version.outputs.next_version }}"
+          echo "QUAY_VERSION=${{ needs.calculate-version.outputs.next_version }}"
+          echo "QUAY_FOLDER_NAME=Quay_${{ needs.calculate-version.outputs.next_version }}" >> $GITHUB_ENV
+          echo "QUAY_VERSION=${{ needs.calculate-version.outputs.next_version }}" >> $GITHUB_ENV
 
       - name: Create release from windows-bin
         run: |
           ls ./
           ls ./bin/
-          cp -R ./bin ./${{ env.CEMU_FOLDER_NAME }}
-          mv cemu-bin-windows-x64/Cemu.exe ./${{ env.CEMU_FOLDER_NAME }}/Cemu.exe
-          zip -9 -r upload/cemu-${{ env.CEMU_VERSION }}-windows-x64.zip ${{ env.CEMU_FOLDER_NAME }}
-          rm -r ./${{ env.CEMU_FOLDER_NAME }}
+          cp -R ./bin ./${{ env.QUAY_FOLDER_NAME }}
+          mv quay-bin-windows-x64/Quay.exe ./${{ env.QUAY_FOLDER_NAME }}/Quay.exe
+          zip -9 -r upload/quay-${{ env.QUAY_VERSION }}-windows-x64.zip ${{ env.QUAY_FOLDER_NAME }}
+          rm -r ./${{ env.QUAY_FOLDER_NAME }}
 
       - name: Create release from windows-installer
-        run: cp cemu-installer-windows-x64/cemu-${{ env.CEMU_VERSION }}-windows-x64-installer.exe upload/cemu-${{ env.CEMU_VERSION }}-windows-x64-installer.exe
+        run: cp quay-installer-windows-x64/quay-${{ env.QUAY_VERSION }}-windows-x64-installer.exe upload/quay-${{ env.QUAY_VERSION }}-windows-x64-installer.exe
 
       - name: Create appimage
         run: |
-          VERSION=${{ env.CEMU_VERSION }}
-          echo "Cemu Version is $VERSION"
-          ls cemu-appimage-x64
-          mv cemu-appimage-x64/Cemu-*-x86_64.AppImage upload/Cemu-$VERSION-x86_64.AppImage
+          VERSION=${{ env.QUAY_VERSION }}
+          echo "Quay Version is $VERSION"
+          ls quay-appimage-x64
+          mv quay-appimage-x64/Quay-*-x86_64.AppImage upload/Quay-$VERSION-x86_64.AppImage
         
       - name: Create release from linux-bin
         run: |
           ls ./
           ls ./bin/
-          cp -R ./bin ./${{ env.CEMU_FOLDER_NAME }}
-          mv cemu-bin-linux-x64/Cemu ./${{ env.CEMU_FOLDER_NAME }}/Cemu
-          zip -9 -r upload/cemu-${{ env.CEMU_VERSION }}-ubuntu-22.04-x64.zip ${{ env.CEMU_FOLDER_NAME }}
-          rm -r ./${{ env.CEMU_FOLDER_NAME }}
+          cp -R ./bin ./${{ env.QUAY_FOLDER_NAME }}
+          mv quay-bin-linux-x64/Quay ./${{ env.QUAY_FOLDER_NAME }}/Quay
+          zip -9 -r upload/quay-${{ env.QUAY_VERSION }}-ubuntu-22.04-x64.zip ${{ env.QUAY_FOLDER_NAME }}
+          rm -r ./${{ env.QUAY_FOLDER_NAME }}
           
       - name: Create release from macos-bin
         run: |
-          cd cemu-macos
-          for bin_dir in cemu-bin-macos-*; do
-            arch="${bin_dir##cemu-bin-macos-}"
-            cp $bin_dir/Cemu.dmg ../upload/cemu-${{ env.CEMU_VERSION }}-macos-12-$arch.dmg
+          cd quay-macos
+          for bin_dir in quay-bin-macos-*; do
+            arch="${bin_dir##quay-bin-macos-}"
+            cp $bin_dir/Quay.dmg ../upload/quay-${{ env.QUAY_VERSION }}-macos-12-$arch.dmg
           done
 
       - name: Create release
         run: |
           wget -O ghr.tar.gz https://github.com/tcnksm/ghr/releases/download/v0.15.0/ghr_v0.15.0_linux_amd64.tar.gz
           tar xvzf ghr.tar.gz; rm ghr.tar.gz
-          echo "[INFO] Release tag: v${{ env.CEMU_VERSION }}"
+          echo "[INFO] Release tag: v${{ env.QUAY_VERSION }}"
           CHANGELOG_UNESCAPED=$(printf "%s\n" "${{ env.RELEASE_BODY }}" | sed 's/\\n/\n/g')          
           RELEASE_BODY=$(printf "%s\n%s" \
             "**Changelog:**" \
             "$CHANGELOG_UNESCAPED")
-          ghr_v0.15.0_linux_amd64/ghr -draft -t ${{ secrets.GITHUB_TOKEN }} -n "Cemu ${{ env.CEMU_VERSION }}" -b "$RELEASE_BODY" "v${{ env.CEMU_VERSION }}" ./upload
+          ghr_v0.15.0_linux_amd64/ghr -draft -t ${{ secrets.GITHUB_TOKEN }} -n "Quay ${{ env.QUAY_VERSION }}" -b "$RELEASE_BODY" "v${{ env.QUAY_VERSION }}" ./upload

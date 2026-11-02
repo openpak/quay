@@ -12,18 +12,18 @@
 
 ManifestDPIAware true
 
-!define PRODUCT_NAME "Cemu"
-!define PRODUCT_PUBLISHER "Team Cemu"
-!define PRODUCT_WEB_SITE "https://cemu.info/"
+!define PRODUCT_NAME "Quay"
+!define PRODUCT_PUBLISHER "OpenPak"
+!define PRODUCT_WEB_SITE "https://openpak.org/"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 !define BINARY_SOURCE_DIR "..\..\bin"
 
 Name "${PRODUCT_NAME}"
-OutFile "cemu-${PRODUCT_VERSION}-windows-x64-installer.exe"
+OutFile "quay-${PRODUCT_VERSION}-windows-x64-installer.exe"
 SetCompressor /SOLID lzma
-InstallDir "$LOCALAPPDATA\Cemu" 
+InstallDir "$LOCALAPPDATA\Quay" 
 ShowInstDetails show
 ShowUnInstDetails show
 
@@ -44,7 +44,7 @@ Page custom desktopShortcutPageCreate desktopShortcutPageLeave
 ; Instfiles page
 !insertmacro MUI_PAGE_INSTFILES
 ; Finish page
-!define MUI_FINISHPAGE_RUN "$INSTDIR\Cemu.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\Quay.exe"
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller pages
@@ -116,9 +116,9 @@ Section "Base"
   File /r "${BINARY_SOURCE_DIR}\*"
 
   ; Create start menu and desktop shortcuts
-  CreateShortCut "$SMPROGRAMS\$(^Name).lnk" "$INSTDIR\Cemu.exe"
+  CreateShortCut "$SMPROGRAMS\$(^Name).lnk" "$INSTDIR\Quay.exe"
   ${If} $DesktopShortcut == 1
-    CreateShortCut "$DESKTOP\$(^Name).lnk" "$INSTDIR\Cemu.exe"
+    CreateShortCut "$DESKTOP\$(^Name).lnk" "$INSTDIR\Quay.exe"
   ${EndIf}
 SectionEnd
 
@@ -127,12 +127,12 @@ SectionEnd
 Section -Post
   WriteUninstaller "$INSTDIR\uninst.exe"
 
-  WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\Cemu.exe"
+  WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\Quay.exe"
 
   ; Write metadata for add/remove programs applet
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-  WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\Cemu.exe"
+  WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\Quay.exe"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -143,8 +143,8 @@ Section -Post
   WriteRegStr HKCU "Software\Classes\.wud" "" "$(^Name)"
   WriteRegStr HKCU "Software\Classes\.wux" "" "$(^Name)"
   WriteRegStr HKCU "Software\Classes\.wua" "" "$(^Name)"
-  WriteRegStr HKCU "Software\Classes\$(^Name)\DefaultIcon" "" "$INSTDIR\Cemu.exe,0"
-  WriteRegStr HKCU "Software\Classes\$(^Name)\Shell\open\command" "" '"$INSTDIR\Cemu.exe" %1'
+  WriteRegStr HKCU "Software\Classes\$(^Name)\DefaultIcon" "" "$INSTDIR\Quay.exe,0"
+  WriteRegStr HKCU "Software\Classes\$(^Name)\Shell\open\command" "" '"$INSTDIR\Quay.exe" %1'
 SectionEnd
 
 Section Uninstall
@@ -152,7 +152,7 @@ Section Uninstall
   Delete "$SMPROGRAMS\$(^Name).lnk"
 
 ; Be a bit careful to not delete files a user may have put into the install directory
-  Delete "$INSTDIR\Cemu.exe"
+  Delete "$INSTDIR\Quay.exe"
   Delete "$INSTDIR\uninst.exe"
   RMDir /r "$INSTDIR\gameProfiles"
   RMDir /r "$INSTDIR\resources"

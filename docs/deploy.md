@@ -6,8 +6,8 @@ No public build yet. There are no releases for Quay.
 
 ## Building from source
 
-Quay has not been built. The tree still builds as Cemu, so upstream's
-[BUILD.md](../BUILD.md) applies and nothing OpenPak-specific changes it:
+Quay has not been built yet. Gate 0 has landed, so the tree builds a `Quay`
+binary; [BUILD.md](../BUILD.md) applies with the Quay names:
 
 ```
 git clone --recursive https://github.com/openpak/quay
@@ -16,5 +16,6 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=release -G Ninja
 cmake --build build
 ```
 
-Expect the binary and window to say Cemu until Gate 0 lands. Commands above
-were not run for this README.
+The binary lands at `bin/Quay_release`. Built and run on Linux 2026-10-27
+(see [evidence](evidence.md)); limit build parallelism on smaller machines
+(full `-j18` on 16 cores / 29 GB RAM OOM-kills PCH compiles — `-j6` works).

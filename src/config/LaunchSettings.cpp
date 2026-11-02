@@ -58,7 +58,7 @@ std::optional<int> LaunchSettings::HandleCommandline(const std::vector<std::wstr
 	po::options_description desc{ "Launch options" };
 	desc.add_options()
 		("help,h", "This help screen")
-		("version,v", "Displays the version of Cemu")
+		("version,v", "Displays the version of Quay")
 #if !BOOST_OS_WINDOWS
 		("verbose", "Log to stdout")
 #endif
@@ -78,7 +78,7 @@ std::optional<int> LaunchSettings::HandleCommandline(const std::vector<std::wstr
 
 		("force-interpreter", po::value<bool>()->implicit_value(true), "Force interpreter CPU emulation, disables recompiler. Useful for debugging purposes where you want to get accurate memory accesses and stack traces.")
 		("force-multicore-interpreter", po::value<bool>()->implicit_value(true), "Force multi-core interpreter CPU emulation, disables recompiler. Only useful for getting stack traces, but slightly faster than the single-core interpreter mode.")
-		("enable-gdbstub", po::value<bool>()->implicit_value(true), "Enable GDB stub to debug executables inside Cemu using an external debugger")
+		("enable-gdbstub", po::value<bool>()->implicit_value(true), "Enable GDB stub to debug executables inside Quay using an external debugger")
 		("open-debugger", po::value<bool>()->implicit_value(true), "Open the PPC debugger window on startup");
 
 	po::options_description hidden{ "Hidden options" };

@@ -32,7 +32,7 @@ wxDECLARE_EVENT(wxEVT_PROGRESS, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_PROGRESS, wxCommandEvent);
 
 CemuUpdateWindow::CemuUpdateWindow(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, _("Cemu update"), wxDefaultPosition, wxDefaultSize,
+	: wxDialog(parent, wxID_ANY, _("Quay update"), wxDefaultPosition, wxDefaultSize,
 		wxCAPTION | wxMINIMIZE_BOX | wxSYSTEM_MENU | wxTAB_TRAVERSAL | wxCLOSE_BOX)
 {
 	auto* sizer = new wxBoxSizer(wxVERTICAL);
@@ -191,6 +191,13 @@ static std::string GetPlatformUpdateIdentifier()
 // returns true if update is available and sets output parameters
 bool CemuUpdateWindow::QueryUpdateInfo(std::string& downloadUrlOut, std::string& changelogUrlOut, std::array<uint8, 32>& fileSha256Out)
 {
+	// Quay: disabled. Quay releases come from openpak/quay; the upstream Cemu update feed
+	// below must never run inside Quay (it would download Cemu over this install).
+	(void)downloadUrlOut;
+	(void)changelogUrlOut;
+	(void)fileSha256Out;
+	return false;
+#if 0
 	std::string rdString = GenerateSecureRandomString();
 	if (rdString.empty())
 		return false;
@@ -273,6 +280,7 @@ bool CemuUpdateWindow::QueryUpdateInfo(std::string& downloadUrlOut, std::string&
 	}
 	curl_easy_cleanup(curl);
 	return result;
+#endif
 }
 
 std::future<bool> CemuUpdateWindow::IsUpdateAvailableAsync()

@@ -909,7 +909,7 @@ void DebuggerWindow2::UpdateModuleLabel(uint32 address)
 	}
 	else if (address >= mmuRange_CODECAVE.getBase() && address < mmuRange_CODECAVE.getEnd())
 	{
-		m_module_label->SetLabel(wxString::Format("> %s", "Cemu codecave"));
+		m_module_label->SetLabel(wxString::Format("> %s", "Quay codecave"));
 		m_module_address = mmuRange_CODECAVE.getBase();
 	}
 }

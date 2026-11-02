@@ -2,7 +2,7 @@
 Type=Application
 Name=Quay
 Comment=Wii U emulator by OpenPak
-Exec=quay
+Exec=Quay
 Icon=org.openpak.quay
 Terminal=false
 Categories=Game;Emulator;

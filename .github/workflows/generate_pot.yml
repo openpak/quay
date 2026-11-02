@@ -22,12 +22,12 @@ jobs:
           --keyword="_" --keyword="wxTRANSLATE" --keyword="wxPLURAL:1,2"
           --keyword="_tr" --keyword="TR_NOOP"
           --check=space-ellipsis --omit-header
-          -o cemu.pot
+          -o quay.pot
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
           name: POT file
-          path: ./cemu.pot
+          path: ./quay.pot
           if-no-files-found: error
           retention-days: 3

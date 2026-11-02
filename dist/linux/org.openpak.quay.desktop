@@ -1,9 +1,9 @@
 [Desktop Entry]
-Name=Cemu
+Name=Quay
 Type=Application
 Terminal=false
-Icon=info.cemu.Cemu
-Exec=Cemu
+Icon=org.openpak.quay
+Exec=Quay
 GenericName=Wii U Emulator
 GenericName[fi]=Wii U -emulaattori
 GenericName[el]=Πρόγραμμα προσομοίωσης Wii U
@@ -24,4 +24,4 @@ Comment[it]=Software per emulare giochi e applicazioni per Wii U su PC
 Categories=Game;Emulator;
 Keywords=Nintendo;
 MimeType=application/x-wii-u-rom;
-StartupWMClass=Cemu
+StartupWMClass=org.openpak.quay

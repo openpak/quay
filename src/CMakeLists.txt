@@ -1,6 +1,6 @@
 project(cemuMain)
 
-option(CEMU_CXX_FLAGS "Additional flags used for compiling Cemu source code")
+option(CEMU_CXX_FLAGS "Additional flags used for compiling Quay source code")
 separate_arguments(CEMU_CXX_FLAGS NATIVE_COMMAND ${CEMU_CXX_FLAGS})
 if(CEMU_CXX_FLAGS)
 	add_compile_options(${CEMU_CXX_FLAGS})
@@ -64,64 +64,64 @@ add_subdirectory(util)
 add_subdirectory(imgui)
 add_subdirectory(resource)
 
-add_executable(CemuBin
+add_executable(QuayBin
 	main.cpp
 	mainLLE.cpp
 )
 
-cemu_use_precompiled_header(CemuBin)
+cemu_use_precompiled_header(QuayBin)
 
 if(MSVC AND MSVC_VERSION EQUAL 1940)
 	# workaround for an msvc issue on VS 17.10 where generated ILK files are too large
 	# see https://developercommunity.visualstudio.com/t/After-updating-to-VS-1710-the-size-of-/10665511
-	set_target_properties(CemuBin PROPERTIES LINK_FLAGS "/INCREMENTAL:NO")
+	set_target_properties(QuayBin PROPERTIES LINK_FLAGS "/INCREMENTAL:NO")
 endif()
 
 if(WIN32)
-	target_sources(CemuBin PRIVATE
+	target_sources(QuayBin PRIVATE
 	resource/cemu.rc
 	../dist/windows/cemu.manifest
 	)
 endif()
 
 if(APPLE AND CMAKE_GENERATOR STREQUAL "Xcode")
-    set_target_properties(CemuBin PROPERTIES
+    set_target_properties(QuayBin PROPERTIES
         XCODE_ATTRIBUTE_ENABLE_DEBUG_DYLIB[variant=Debug] "YES"
     )
 endif()
 
 string(TIMESTAMP CURRENT_YEAR "%Y" UTC)
 
-set_property(TARGET CemuBin PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set_property(TARGET CemuBin PROPERTY WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>)
-set(OUTPUT_NAME "Cemu_$<LOWER_CASE:$<CONFIG>>")
+set_property(TARGET QuayBin PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set_property(TARGET QuayBin PROPERTY WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>)
+set(OUTPUT_NAME "Quay_$<LOWER_CASE:$<CONFIG>>")
 
 if (MACOS_BUNDLE)
-	set_property(TARGET CemuBin PROPERTY MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resource/MacOSXBundleInfo.plist.in")
+	set_property(TARGET QuayBin PROPERTY MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resource/MacOSXBundleInfo.plist.in")
 
 	set(RESOURCE_FILES "${CMAKE_SOURCE_DIR}/src/resource/cemu.icns")
-	target_sources(CemuBin PRIVATE "${RESOURCE_FILES}")
+	target_sources(QuayBin PRIVATE "${RESOURCE_FILES}")
 
 	set(MACOSX_BUNDLE_ICON_FILE "cemu.icns")
-	set(MACOSX_BUNDLE_GUI_IDENTIFIER "info.cemu.Cemu")
-	set(MACOSX_BUNDLE_BUNDLE_NAME "Cemu")
+	set(MACOSX_BUNDLE_GUI_IDENTIFIER "org.openpak.quay")
+	set(MACOSX_BUNDLE_BUNDLE_NAME "Quay")
 	set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${EMULATOR_VERSION_MAJOR}.${EMULATOR_VERSION_MINOR}.${EMULATOR_VERSION_PATCH}")
 	set(MACOSX_BUNDLE_BUNDLE_VERSION "${EMULATOR_VERSION_MAJOR}.${EMULATOR_VERSION_MINOR}.${EMULATOR_VERSION_PATCH}")
-	set(MACOSX_BUNDLE_COPYRIGHT "Copyright © ${CURRENT_YEAR} Cemu Project")
+	set(MACOSX_BUNDLE_COPYRIGHT "Copyright © ${CURRENT_YEAR} OpenPak")
 
 	set(MACOSX_BUNDLE_CATEGORY "public.app-category.games")
  	set(MACOSX_MINIMUM_SYSTEM_VERSION "13.4")
   	set(MACOSX_BUNDLE_TYPE_EXTENSION "wua")
 
-	set_target_properties(CemuBin PROPERTIES
+	set_target_properties(QuayBin PROPERTIES
 		MACOSX_BUNDLE true
 		RESOURCE "${RESOURCE_FILES}"
 	)
 
 	set(FOLDERS gameProfiles resources)
 	foreach(folder ${FOLDERS})
-		add_custom_command (TARGET CemuBin POST_BUILD
-			COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/bin/${folder}" "$<TARGET_BUNDLE_DIR:CemuBin>/Contents/SharedSupport/${folder}")
+		add_custom_command (TARGET QuayBin POST_BUILD
+			COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/bin/${folder}" "$<TARGET_BUNDLE_DIR:QuayBin>/Contents/SharedSupport/${folder}")
 	endforeach(folder)
 
 	if (ENABLE_VULKAN)
@@ -142,11 +142,11 @@ if (MACOS_BUNDLE)
 		endif()
 	endif()
 
-	set(APP_BUNDLE_DIR "$<TARGET_BUNDLE_DIR:CemuBin>")
+	set(APP_BUNDLE_DIR "$<TARGET_BUNDLE_DIR:QuayBin>")
 	set(FRAMEWORKS_DIR "${APP_BUNDLE_DIR}/Contents/Frameworks")
 
 	if (ENABLE_VULKAN)
-		add_custom_command(TARGET CemuBin POST_BUILD
+		add_custom_command(TARGET QuayBin POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy 
 				"${MOLTENVK_PATH}"
 				"${FRAMEWORKS_DIR}/libMoltenVK.dylib"
@@ -154,24 +154,24 @@ if (MACOS_BUNDLE)
 	endif()
 
 	if (ENABLE_LIBUSB)
-		add_custom_command(TARGET CemuBin POST_BUILD
+		add_custom_command(TARGET QuayBin POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy
 				"${LIBUSB_PATH}"
 				"${FRAMEWORKS_DIR}/libusb-1.0.0.dylib"
 		)
 	endif()
 
-	set_target_properties(CemuBin PROPERTIES
+	set_target_properties(QuayBin PROPERTIES
 		BUILD_WITH_INSTALL_RPATH TRUE
 		INSTALL_RPATH "@executable_path/../Frameworks"
 	)
 
 	if (ENABLE_LIBUSB)
-		add_custom_command(TARGET CemuBin POST_BUILD
+		add_custom_command(TARGET QuayBin POST_BUILD
 		COMMAND install_name_tool
 			-change @rpath/libusb-1.0.0.dylib
 				@executable_path/../Frameworks/libusb-1.0.0.dylib
-				"$<TARGET_FILE:CemuBin>"
+				"$<TARGET_FILE:QuayBin>"
 		)
 	endif()
 else()
@@ -183,11 +183,11 @@ else()
 			)
 			if(MOLTENVK_LIBRARY)
 				message(STATUS "Found MoltenVK: ${MOLTENVK_LIBRARY}")
-				target_link_libraries(CemuBin PRIVATE ${MOLTENVK_LIBRARY})
+				target_link_libraries(QuayBin PRIVATE ${MOLTENVK_LIBRARY})
 			else()
 				message(WARNING "libMoltenVK.dylib not found")
 			endif()
-			set_target_properties(CemuBin PROPERTIES
+			set_target_properties(QuayBin PROPERTIES
 				BUILD_WITH_INSTALL_RPATH TRUE
 				INSTALL_RPATH "/usr/local/lib;/opt/homebrew/lib"
 			)
@@ -195,7 +195,7 @@ else()
     endif()
 endif()
 
-set_target_properties(CemuBin PROPERTIES
+set_target_properties(QuayBin PROPERTIES
 	# multi-configuration generators will add a config subdirectory to RUNTIME_OUTPUT_DIRECTORY if no generator expression is used
 	# to get the same behavior everywhere we append an empty generator expression
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin/$<1:>"
@@ -203,10 +203,10 @@ set_target_properties(CemuBin PROPERTIES
 )
 
 if(ENABLE_SDL)
-	target_link_libraries(CemuBin PRIVATE SDL3::SDL3)
+	target_link_libraries(QuayBin PRIVATE SDL3::SDL3)
 endif()
 
-target_link_libraries(CemuBin PRIVATE
+target_link_libraries(QuayBin PRIVATE
 	CemuAudio
 	CemuCafe
 	CemuCommon
@@ -220,12 +220,12 @@ target_link_libraries(CemuBin PRIVATE
 if(UNIX AND NOT APPLE)
 	# due to nasm output some linkers will make stack executable
 	# cemu does not require this so we explicity disable it
-	target_link_options(CemuBin PRIVATE -z noexecstack)
+	target_link_options(QuayBin PRIVATE -z noexecstack)
 	# some residual debug info from boost/discord-rpc is normally included
 	# most likely not helpful in debugging problems with cemu code
-	target_link_options(CemuBin PRIVATE "$<$<CONFIG:Release>:-Xlinker;--strip-debug>")
+	target_link_options(QuayBin PRIVATE "$<$<CONFIG:Release>:-Xlinker;--strip-debug>")
 endif()
 
 if (BSD)
-	target_link_libraries(CemuBin PRIVATE execinfo SPIRV-Tools SPIRV-Tools-opt)
+	target_link_libraries(QuayBin PRIVATE execinfo SPIRV-Tools SPIRV-Tools-opt)
 endif()

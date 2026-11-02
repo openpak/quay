@@ -20,40 +20,40 @@ if [[ ! -e /usr/lib/"${CPU_ARCH}"-linux-gnu ]]; then
 fi
 
 mkdir -p AppDir/usr/bin
-mkdir -p AppDir/usr/share/Cemu
+mkdir -p AppDir/usr/share/Quay
 mkdir -p AppDir/usr/share/applications
 mkdir -p AppDir/usr/share/icons/hicolor/128x128/apps
 mkdir -p AppDir/usr/share/metainfo
 mkdir -p AppDir/usr/lib
 
-cp dist/linux/info.cemu.Cemu.{desktop,png} AppDir/
-cp dist/linux/info.cemu.Cemu.metainfo.xml AppDir/usr/share/metainfo/info.cemu.Cemu.appdata.xml
+cp dist/linux/info.quay.Quay.{desktop,png} AppDir/
+cp dist/linux/info.quay.Quay.metainfo.xml AppDir/usr/share/metainfo/info.quay.Quay.appdata.xml
 
-cp -r bin/* AppDir/usr/share/Cemu
+cp -r bin/* AppDir/usr/share/Quay
 
-mv AppDir/usr/share/Cemu/Cemu AppDir/usr/bin/
-chmod +x AppDir/usr/bin/Cemu
+mv AppDir/usr/share/Quay/Quay AppDir/usr/bin/
+chmod +x AppDir/usr/bin/Quay
 
 cp /usr/lib/"${CPU_ARCH}"-linux-gnu/{libsepol.so.1,libffi.so.7,libpcre.so.3,libGLU.so.1,libthai.so.0} AppDir/usr/lib
 
-export UPD_INFO="gh-releases-zsync|cemu-project|Cemu|ci|Cemu.AppImage.zsync"
+export UPD_INFO="gh-releases-zsync|openpak|quay|nightly|Quay.AppImage.zsync"
 export NO_STRIP=1
 ./linuxdeploy-"${CPU_ARCH}".AppImage --appimage-extract-and-run \
   --appdir="${GITHUB_WORKSPACE}"/AppDir/ \
-  -d "${GITHUB_WORKSPACE}"/AppDir/info.cemu.Cemu.desktop \
-  -i "${GITHUB_WORKSPACE}"/AppDir/info.cemu.Cemu.png \
-  -e "${GITHUB_WORKSPACE}"/AppDir/usr/bin/Cemu \
+  -d "${GITHUB_WORKSPACE}"/AppDir/info.quay.Quay.desktop \
+  -i "${GITHUB_WORKSPACE}"/AppDir/info.quay.Quay.png \
+  -e "${GITHUB_WORKSPACE}"/AppDir/usr/bin/Quay \
   --plugin gtk \
   --plugin checkrt
 
 if ! GITVERSION="$(git rev-parse --short HEAD 2>/dev/null)"; then
 	GITVERSION=experimental
 fi
-echo "Cemu Version Cemu-${GITVERSION}"
+echo "Quay Version Quay-${GITVERSION}"
 
 rm AppDir/usr/lib/libwayland-client.so.0
 echo -e "export LC_ALL=C\nexport FONTCONFIG_PATH=/etc/fonts" >> AppDir/apprun-hooks/linuxdeploy-plugin-gtk.sh
 VERSION="${GITVERSION}" ./mkappimage.AppImage --appimage-extract-and-run "${GITHUB_WORKSPACE}"/AppDir
 
 mkdir -p "${GITHUB_WORKSPACE}"/artifacts/
-mv Cemu-"${GITVERSION}"-"${CPU_ARCH}".AppImage "${GITHUB_WORKSPACE}"/artifacts/
+mv Quay-"${GITVERSION}"-"${CPU_ARCH}".AppImage "${GITHUB_WORKSPACE}"/artifacts/

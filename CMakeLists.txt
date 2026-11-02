@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21.1)
 
 option(ENABLE_VCPKG "Enable the vcpkg package manager" ON)
 option(MACOS_BUNDLE "The executable when built on macOS will be created as an application bundle" OFF)
-option(ALLOW_PORTABLE "Allow Cemu to be run in portable mode" ON)
+option(ALLOW_PORTABLE "Allow Quay to be run in portable mode" ON)
 
 # used by CI script to set version:
 set(EMULATOR_VERSION_MAJOR "0" CACHE STRING "")
@@ -55,7 +55,7 @@ if (ENABLE_VCPKG)
 	endif()
 endif()
 
-project(Cemu VERSION 2.0.0)
+project(Quay VERSION 2.0.0)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -77,7 +77,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
 
 if (MSVC)
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT CemuBin)
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QuayBin)
 	# floating point model: precise, fiber safe optimizations
 	add_compile_options(/EHsc /fp:precise)
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -94,7 +94,7 @@ if (MSVC)
 endif()
 
 if(CMAKE_GENERATOR STREQUAL "Xcode")
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY XCODE_STARTUP_PROJECT CemuBin)
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY XCODE_STARTUP_PROJECT QuayBin)
 endif()
 
 if (APPLE)

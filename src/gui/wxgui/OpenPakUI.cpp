@@ -113,7 +113,7 @@ namespace
 			form->Add(new wxStaticText(this, wxID_ANY, _("Device name")), 0, wxALIGN_CENTER_VERTICAL);
 			wxString device = wxString::FromUTF8(OpenPakPrefs::DeviceName());
 			if (device.empty())
-				device = wxString::Format(_("%s on %s"), "Cemu", wxGetHostName());
+				device = wxString::Format(_("%s on %s"), "Quay", wxGetHostName());
 			m_device = new wxTextCtrl(this, wxID_ANY, device);
 			form->Add(m_device, 1, wxEXPAND);
 			form->AddSpacer(0);

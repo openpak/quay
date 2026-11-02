@@ -93,7 +93,7 @@ CubebAPI::CubebAPI(cubeb_devid devid, uint32 samplerate, uint32 channels, uint32
 
 	m_buffer.reserve((size_t)m_bytesPerBlock * kBlockCount);
 
-	if (cubeb_stream_init(s_context, &m_stream, "Cemu Cubeb output",
+	if (cubeb_stream_init(s_context, &m_stream, "Quay Cubeb output",
 	                      nullptr, nullptr,
 	                      devid, &output_params,
 	                      latency, data_cb, state_cb, this) != CUBEB_OK)
@@ -167,7 +167,7 @@ void CubebAPI::SetVolume(sint32 volume)
 
 bool CubebAPI::InitializeStatic()
 {
-	if (cubeb_init(&s_context, "Cemu Cubeb", nullptr))
+	if (cubeb_init(&s_context, "Quay Cubeb", nullptr))
 	{
 		cemuLog_log(LogType::Force, "can't create cubeb audio api");
 		return false;

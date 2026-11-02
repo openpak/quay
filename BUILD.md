@@ -8,7 +8,7 @@
       - [For Arch and derivatives:](#for-arch-and-derivatives)
       - [For Debian, Ubuntu and derivatives](#for-debian-ubuntu-and-derivatives)
       - [For Fedora and derivatives:](#for-fedora-and-derivatives)
-   - [Build Cemu](#build-cemu)
+   - [Build Quay](#build-quay)
       - [CMake and Clang](#cmake-and-clang)
       - [GCC](#gcc)
       - [Debug Build](#debug-build)
@@ -19,11 +19,11 @@
    - [Installing brew](#installing-brew)
    - [Dependencies](#dependencies-1)
    - [MoltenVK](#moltenvk)
-   - [Build Cemu using CMake](#build-cemu-using-cmake)
+   - [Build Quay using CMake](#build-quay-using-cmake)
 - [FreeBSD](#freebsd)
 	- [Installing Dependencies](#installing-dependencies)
-	- [Build Cemu on BSD with CMake](#build-cemu-on-bsd-with-cmake)
-- [Updating Cemu and source code](#updating-cemu-and-source-code)
+	- [Build Quay on BSD with CMake](#build-quay-on-bsd-with-cmake)
+- [Updating Quay and source code](#updating-quay-and-source-code)
 
 ## Windows
 
@@ -35,16 +35,16 @@ Prerequisites:
 
 Instructions for Visual Studio 2022:
 
-1. Run `git clone --recursive https://github.com/cemu-project/Cemu`
-2. Open the newly created Cemu directory in Visual Studio using the "Open a local folder" option
+1. Run `git clone --recursive https://github.com/openpak/quay`
+2. Open the newly created quay directory in Visual Studio using the "Open a local folder" option
 3. In the menu select Project -> Configure CMake. Wait until it is done, this may take a long time
-4. You can now build, run and debug Cemu
+4. You can now build, run and debug Quay
 
 Any other IDE should also work as long as it has CMake and MSVC support. CLion and Visual Studio Code have been confirmed to work.
 
 ## Linux
 
-To compile Cemu, a recent enough compiler and STL with C++20 support is required! Clang-15 or higher is what we recommend.
+To compile Quay, a recent enough compiler and STL with C++20 support is required! Clang-15 or higher is what we recommend.
 
 ### Dependencies
 
@@ -56,19 +56,19 @@ To compile Cemu, a recent enough compiler and STL with C++20 support is required
 
 You may also need to install `libusb-1.0-0-dev` as a workaround for an issue with the vcpkg hidapi package.
 
-At Step 3 in [Build Cemu using CMake and Clang](#cmake-and-clang), use the following command instead:
+At Step 3 in [Build Quay using CMake and Clang](#cmake-and-clang), use the following command instead:
    `cmake -S . -B build -DCMAKE_BUILD_TYPE=release -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15 -G Ninja -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja`
 
 #### For Fedora and derivatives:
 `sudo dnf install bluez-libs-devel clang cmake cubeb-devel freeglut-devel git glm-devel gtk3-devel kernel-headers libgcrypt-devel libsecret-devel libtool libusb1-devel llvm nasm ninja-build perl-core systemd-devel wayland-protocols-devel zlib-devel zlib-static`
 
-### Build Cemu
+### Build Quay
 
 #### CMake and Clang
 
 ```
-git clone --recursive https://github.com/cemu-project/Cemu
-cd Cemu
+git clone --recursive https://github.com/openpak/quay
+cd quay
 cmake -S . -B build -DCMAKE_BUILD_TYPE=release -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -G Ninja
 cmake --build build
 ```
@@ -81,8 +81,8 @@ If you are building using GCC, make sure you have g++ installed:
 - Installation for Fedora and derivatives: `sudo dnf install gcc-c++`
 
 ```
-git clone --recursive https://github.com/cemu-project/Cemu
-cd Cemu
+git clone --recursive https://github.com/openpak/quay
+cd quay
 cmake -S . -B build -DCMAKE_BUILD_TYPE=release -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ -G Ninja
 cmake --build build
 ```
@@ -90,8 +90,8 @@ cmake --build build
 #### Debug Build
 
 ```
-git clone --recursive https://github.com/cemu-project/Cemu
-cd Cemu
+git clone --recursive https://github.com/openpak/quay
+cd quay
 cmake -S . -B build -DCMAKE_BUILD_TYPE=debug -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -G Ninja
 cmake --build build
 ```
@@ -112,9 +112,9 @@ This section refers to running `cmake -S...` (truncated).
       * Update vcpkg by running the following command:
          * `git submodule update --remote dependencies/vcpkg`
       * If you are sure vcpkg is up to date, check the following logs:
-         * `Cemu/dependencies/vcpkg/buildtrees/wxwidgets/config-x64-linux-out.log`
-         * `Cemu/dependencies/vcpkg/buildtrees/libsystemd/config-x64-linux-dbg-meson-log.txt.log`
-         * `Cemu/dependencies/vcpkg/buildtrees/libsystemd/config-x64-linux-dbg-out.log`
+         * `quay/dependencies/vcpkg/buildtrees/wxwidgets/config-x64-linux-out.log`
+         * `quay/dependencies/vcpkg/buildtrees/libsystemd/config-x64-linux-dbg-meson-log.txt.log`
+         * `quay/dependencies/vcpkg/buildtrees/libsystemd/config-x64-linux-dbg-out.log`
 * Not able to find Ninja.
    * Add the following and try running the command again:
       * `-DCMAKE_MAKE_PROGRAM=/usr/bin/ninja`
@@ -129,7 +129,7 @@ This section refers to running `cmake -S...` (truncated).
 * If you are getting a random error, read the [package-name-and-platform]-out.log and [package-name-and-platform]-err.log for the actual reason to see if you might be lacking the headers from a dependency.
 
 
-If you are getting a different error than any of the errors listed above, you may either open an issue in this repo or try using [GCC](#gcc). Make sure your standard library and compilers are updated since Cemu uses a lot of modern features!
+If you are getting a different error than any of the errors listed above, you may either open an issue in this repo or try using [GCC](#gcc). Make sure your standard library and compilers are updated since Quay uses a lot of modern features!
 
 
 ##### Building Errors
@@ -143,17 +143,17 @@ This section refers to running `cmake --build build`.
 * `undefined libdecor_xx`
    * You are likely experiencing an issue with the sdl2 package that comes with vcpkg. Delete sdl2 from vcpkg.json in source file and recompile.
 
-If you are getting a different error than any of the errors listed above, you may either open an issue in this repo or try using [GCC](#gcc). Make sure your standard library and compilers are updated since Cemu uses a lot of modern features!
+If you are getting a different error than any of the errors listed above, you may either open an issue in this repo or try using [GCC](#gcc). Make sure your standard library and compilers are updated since Quay uses a lot of modern features!
 
 ## macOS
 
-To compile Cemu, a recent enough compiler and STL with C++20 support is required! LLVM 13 and below
+To compile Quay, a recent enough compiler and STL with C++20 support is required! LLVM 13 and below
 don't support the C++20 feature set required, so either install LLVM from Homebrew or make sure that
 you have a recent enough version of Xcode. Xcode 15 is known to work.
 
 ### Installing brew
 
-To install the dependencies required to build Cemu, you will need to install Homebrew package manager first. You can do this by running the following command in your terminal:
+To install the dependencies required to build Quay, you will need to install Homebrew package manager first. You can do this by running the following command in your terminal:
 
 1. `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 2. Set up the Homebrew shell environment:
@@ -168,7 +168,7 @@ The following dependencies are required. You can install them using Homebrew wit
 
 ### MoltenVK
 
-Cemu uses the MoltenVK library to provide Vulkan support on macOS. While available on Brew, Cemu requires the "privateapi" version of MoltenVK, which is not available on Brew. To install the required version, follow the instructions below:
+Quay uses the MoltenVK library to provide Vulkan support on macOS. While available on Brew, Quay requires the "privateapi" version of MoltenVK, which is not available on Brew. To install the required version, follow the instructions below:
 
 1. `curl -L -O https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-macos-privateapi.tar`
 1. `tar xf MoltenVK-macos-privateapi.tar`
@@ -181,13 +181,13 @@ Cemu uses the MoltenVK library to provide Vulkan support on macOS. While availab
 
 Alternatively, you can use the non-privateapi version of MoltenVK, but you may encounter some rendering issues due to the lack of logicOp support. If you want to go this route, simply install MoltenVK from Brew with `brew install molten-vk` and skip the steps above.
 
-### Build Cemu using CMake
+### Build Quay using CMake
 
-1. `git clone --recursive https://github.com/cemu-project/Cemu`
-2. `cd Cemu`
+1. `git clone --recursive https://github.com/openpak/quay`
+2. `cd quay`
 3. `cmake -S . -B build -DCMAKE_BUILD_TYPE=release -G Ninja`
 4. `cmake --build build`
-5. You should now have a Cemu executable file in the /bin folder, which you can run using `./bin/Cemu_release`.
+5. You should now have a Quay executable file in the /bin folder, which you can run using `./bin/Quay_release`.
 
 #### Creating an app bundle
 - If you want to create an app bundle instead of a raw executable, append the following flag to the command in step 3:
@@ -200,9 +200,9 @@ Alternatively, you can use the non-privateapi version of MoltenVK, but you may e
 
 ## FreeBSD
 
-The following instructions to build Cemu on FreeBSD are experimental. Some features available on other platforms are not available on FreeBSD (discord rich presence, bluetooth/support for actual Wii U controllers, auto-updates, etc.)
+The following instructions to build Quay on FreeBSD are experimental. Some features available on other platforms are not available on FreeBSD (discord rich presence, bluetooth/support for actual Wii U controllers, auto-updates, etc.)
 
-To compile Cemu, a recent enough compiler and STL with C++20 support is required! Clang-15 or higher is what we recommend. Any version of FreeBSD 13.3-RELEASE or higher comes bundled with LLVM > version 15 as part of the base system. However, if for whatever reason your system lacks a recent version of LLVM you can install one by executing:
+To compile Quay, a recent enough compiler and STL with C++20 support is required! Clang-15 or higher is what we recommend. Any version of FreeBSD 13.3-RELEASE or higher comes bundled with LLVM > version 15 as part of the base system. However, if for whatever reason your system lacks a recent version of LLVM you can install one by executing:
 
 `sudo pkg install llvm15`
 
@@ -212,25 +212,25 @@ Or a higher version as desired.
 
 `sudo pkg install boost-libs cmake-core curl glslang gtk3 libzip ninja png pkgconf pugixml rapidjson sdl2 wayland wayland-protocols wx32-gtk3 xorg zstd`
 
-### Build Cemu on BSD with CMake
+### Build Quay on BSD with CMake
 
 ```
-git clone --recursive https://github.com/cemu-project/Cemu
-cd Cemu
+git clone --recursive https://github.com/openpak/quay
+cd quay
 cmake -B build -DCMAKE_BUILD_TYPE=release -DENABLE_BLUEZ=OFF -DENABLE_DISCORD_RPC=OFF -DENABLE_FERAL_GAMEMODE=OFF -DENABLE_HIDAPI=OFF -DENABLE_VCPKG=OFF -G Ninja
 cmake --build build
 
 cd build && ninja install
 ```
 
-You should now have a Cemu executable file in the /bin folder, which you can run using `./bin/Cemu_release`.
+You should now have a Quay executable file in the /bin folder, which you can run using `./bin/Quay_release`.
 
-## Updating Cemu and source code
-1. To update your Cemu local repository, use the command `git pull --recurse-submodules` (run this command in the Cemu root).
-    - This should update your local copy of Cemu and all of its dependencies.
-2. Then, you can rebuild Cemu using the steps listed above, according to whether you use Linux or Windows.
+## Updating Quay and source code
+1. To update your Quay local repository, use the command `git pull --recurse-submodules` (run this command in the quay root).
+    - This should update your local copy of Quay and all of its dependencies.
+2. Then, you can rebuild Quay using the steps listed above, according to whether you use Linux or Windows.
 
-If CMake complains about Cemu already being compiled or another similar error, try deleting the `CMakeCache.txt` file inside the `build` folder and retry building.
+If CMake complains about Quay already being compiled or another similar error, try deleting the `CMakeCache.txt` file inside the `build` folder and retry building.
 
 ## CMake configure flags
 Some flags can be passed during CMake configure to customise which features are enabled on build.
@@ -240,7 +240,7 @@ Example usage: `cmake -S . -B build -DCMAKE_BUILD_TYPE=release -DENABLE_SDL=ON -
 ### All platforms
 | Flag               |   | Description                                                                 | Default | Note               |
 |--------------------|:--|-----------------------------------------------------------------------------|---------|--------------------|
-| ALLOW_PORTABLE     |   | Allow Cemu to use the `portable` directory to store configs and data        | ON      |                    |
+| ALLOW_PORTABLE     |   | Allow Quay to use the `portable` directory to store configs and data        | ON      |                    |
 | CEMU_CXX_FLAGS     |   | Flags passed straight to the compiler, e.g. `-march=native`, `-Wall`, `/W3` | ""      |                    |
 | ENABLE_CUBEB       |   | Enable cubeb audio backend                                                  | ON      |                    |
 | ENABLE_DISCORD_RPC |   | Enable Discord Rich presence support                                        | ON      |                    |

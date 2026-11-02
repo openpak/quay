@@ -570,7 +570,7 @@ void GraphicPacksWindow2::OnTreeChoiceChanged(wxTreeEvent& event)
 	}
 
 	if (!m_info_bar->IsShown() && (isRunning && requiresRestart))
-		m_info_bar->ShowMessage(_("Restart of Cemu required for changes to take effect"));
+		m_info_bar->ShowMessage(_("Restart of Quay required for changes to take effect"));
 
 	// also change selection to activated gp
 	m_graphic_pack_tree->SelectItem(item);
@@ -629,7 +629,7 @@ void GraphicPacksWindow2::OnActivePresetChanged(wxCommandEvent& event)
 	if (!m_shown_graphic_pack->RequiresRestart(false, true))
 		ReloadPack(m_shown_graphic_pack);
 	else if (!m_info_bar->IsShown())
-		m_info_bar->ShowMessage(_("Restart of Cemu required for changes to take effect"));		
+		m_info_bar->ShowMessage(_("Restart of Quay required for changes to take effect"));		
 }
 
 void GraphicPacksWindow2::OnReloadShaders(wxCommandEvent& event)

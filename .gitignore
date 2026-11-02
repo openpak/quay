@@ -20,16 +20,16 @@ build/
 cmake-build-*/
 out/
 .cache/
-bin/Cemu_*
-bin/Cemu_*.exe
+bin/Quay_*
+bin/Quay_*.exe
 
 # Cemu bin files
 bin/otp.bin
 bin/seeprom.bin
 bin/log.txt
-bin/Cemu_*.pdb
-bin/Cemu_*.ilk
-bin/Cemu.exe.backup
+bin/Quay_*.pdb
+bin/Quay_*.ilk
+bin/Quay.exe.backup
 bin/mlc01/*
 bin/settings.xml
 bin/network_services.xml
@@ -55,3 +55,4 @@ bin/graphicPacks/*
 # Ignore Finder view option files created by OS X
 .DS_Store
 next-session.md
+bin/Cemu_*
