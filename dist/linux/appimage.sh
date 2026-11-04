@@ -26,8 +26,8 @@ mkdir -p AppDir/usr/share/icons/hicolor/128x128/apps
 mkdir -p AppDir/usr/share/metainfo
 mkdir -p AppDir/usr/lib
 
-cp dist/linux/info.quay.Quay.{desktop,png} AppDir/
-cp dist/linux/info.quay.Quay.metainfo.xml AppDir/usr/share/metainfo/info.quay.Quay.appdata.xml
+cp dist/linux/org.openpak.quay.{desktop,png} AppDir/
+cp dist/linux/org.openpak.quay.metainfo.xml AppDir/usr/share/metainfo/org.openpak.quay.appdata.xml
 
 cp -r bin/* AppDir/usr/share/Quay
 
@@ -40,8 +40,8 @@ export UPD_INFO="gh-releases-zsync|openpak|quay|nightly|Quay.AppImage.zsync"
 export NO_STRIP=1
 ./linuxdeploy-"${CPU_ARCH}".AppImage --appimage-extract-and-run \
   --appdir="${GITHUB_WORKSPACE}"/AppDir/ \
-  -d "${GITHUB_WORKSPACE}"/AppDir/info.quay.Quay.desktop \
-  -i "${GITHUB_WORKSPACE}"/AppDir/info.quay.Quay.png \
+  -d "${GITHUB_WORKSPACE}"/AppDir/org.openpak.quay.desktop \
+  -i "${GITHUB_WORKSPACE}"/AppDir/org.openpak.quay.png \
   -e "${GITHUB_WORKSPACE}"/AppDir/usr/bin/Quay \
   --plugin gtk \
   --plugin checkrt
