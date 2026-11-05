@@ -3,6 +3,10 @@
 Only OpenPak's changes are listed; everything else is upstream. `git log` stays the source of
 truth. Tags are `vX.Y.Z`; `v*.*.*` publishes a GitHub Release (`nightly` is a rolling pre-release).
 
+## Unreleased
+
+- imgui: advertise a gamepad to ImGui (`ImGuiBackendFlags_HasGamepad`) and clear the legacy NavInputs each frame; ImGui 1.89 ignored controller navigation without the flag, so the software keyboard could not be used with a controller
+
 ## v0.4.3 — 2026-11-04
 
 - Cemu rebranded to Quay across CI, build, packaging, GUI strings and docs; the AppImage and

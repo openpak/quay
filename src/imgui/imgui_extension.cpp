@@ -131,6 +131,11 @@ void ImGui_UpdateWindowInformation(bool mainWindow)
 	ImGuiIO& io = ImGui::GetIO();
 	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	// ImGui 1.89 ignores NavInputs unless the backend advertises a gamepad: without this flag the
+	// software keyboard (swkbd) and every other ImGui overlay cannot be used with a controller.
+	io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+	// the legacy NavInputs are level values set below; clear last frame's so a released button stops
+	std::fill(std::begin(io.NavInputs), std::end(io.NavInputs), 0.0f);
 #if BOOST_OS_WINDOWS
 	io.ImeWindowHandle = mainWindow ? windowInfo.window_main.surface : windowInfo.window_pad.surface;
 #else
