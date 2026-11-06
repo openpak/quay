@@ -5,6 +5,8 @@ truth. Tags are `vX.Y.Z`; `v*.*.*` publishes a GitHub Release (`nightly` is a ro
 
 ## Unreleased
 
+- OpenPak sign-in: account.dat MiiName is written as the 11 UTF-16 units Account::ParseFile requires, and ASCII is decoded with 7 bits; before, every signed-in OpenPak account failed to load and Quay silently ran the offline first account (no NEX traffic), with a garbled Mii name
+
 - imgui: advertise a gamepad to ImGui (`ImGuiBackendFlags_HasGamepad`) and clear the legacy NavInputs each frame; ImGui 1.89 ignored controller navigation without the flag, so the software keyboard could not be used with a controller
 
 ## v0.4.3 — 2026-11-04

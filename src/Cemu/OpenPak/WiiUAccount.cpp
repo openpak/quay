@@ -218,7 +218,8 @@ namespace
 			else if (c >= 0xC0) len = 2;
 			if (i + len > utf8.size())
 				break;
-			uint32 cp = c & (0xFF >> (len + 1));
+			// lead-byte payload bits: 7 for ASCII, then 5/4/3 (0xFF >> (len + 1) left ASCII with 6 bits and mangled every name)
+			uint32 cp = len == 1 ? (c & 0x7F) : (c & (0xFF >> (len + 1)));
 			for (size_t k = 1; k < len; ++k)
 				cp = (cp << 6) | ((unsigned char)utf8[i + k] & 0x3F);
 			out.push_back((wchar_t)cp);
@@ -455,9 +456,11 @@ namespace OpenPakAccount
 		file << fmt::format("TransferableIdBase={:x}", (0x2000004ULL << 32) | ((uint64)uuid[12] << 24) | ((uint64)uuid[13] << 16) | ((uint64)uuid[14] << 8) | (uint64)uuid[15]) << std::endl;
 		file << "Uuid=" << ToHex(uuid.data(), uuid.size()) << std::endl;
 		file << "MiiData=" << ToHex(miiBytes.data(), miiBytes.size()) << std::endl;
+		// Account::ParseFile wants exactly 11 UTF-16 units (ten characters and the terminator); a shorter field makes the
+		// account fail to load and Quay falls back to the first (offline) account.
 		file << "MiiName=";
-		for (wchar_t c : miiNameWide)
-			file << fmt::format("{:04x}", (uint16)c);
+		for (size_t i = 0; i < 11; ++i)
+			file << fmt::format("{:04x}", i < miiNameWide.size() && i < 10 ? (uint16)miiNameWide[i] : 0);
 		file << std::endl;
 		// The NNAS login sends AccountId as the user_id; the adapter resolves it
 		// by username, so this is the minted NNID and never the core uuid.
