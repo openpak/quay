@@ -3,6 +3,12 @@
 Only OpenPak's changes are listed; everything else is upstream. `git log` stays the source of
 truth. Tags are `vX.Y.Z`; `v*.*.*` publishes a GitHub Release (`nightly` is a rolling pre-release).
 
+## v0.4.5 — 2026-11-07
+
+- nn_act: `Finalize` implemented (drops the Initialize reference count; it was an unsupported call returning 0)
+- nn_ec: the `ShoppingCatalog`, `Query` and `DateTime` constructors and the first two destructors return their this pointer instead of 0, so a title that builds them no longer dereferences null
+- Minecraft: Wii U Edition needs the Mii resource files (`FFLResMiddle.dat` and `FFLResHigh.dat` of system title 0005001b10056000) under `mlc01/sys/title/0005001b/10056000/content`. Without them its FFL init fails and the game dereferences null right after init (the crash seen after `nn_act.Finalize`)
+
 ## v0.4.4 — 2026-11-07
 
 - OpenPak sign-in: account.dat MiiName is written as the 11 UTF-16 units Account::ParseFile requires, and ASCII is decoded with 7 bits; before, every signed-in OpenPak account failed to load and Quay silently ran the offline first account (no NEX traffic), with a garbled Mii name. Accounts signed in with an earlier build: sign in again (or fix the MiiName line in account.dat)

@@ -1,5 +1,6 @@
 #include "Cafe/OS/common/OSCommon.h"
 #include "nn_ec.h"
+#include "Cafe/OS/libs/nn_common.h"
 
 typedef struct  
 {
@@ -20,6 +21,17 @@ void nnEcExport___ct__Q3_2nn2ec5MoneyFPCcN21(PPCInterpreter_t* hCPU)
 
 namespace nn::ec
 {
+	// Object constructors: the game passes the constructor's result on, so a
+	// constructor must return its this pointer (an unimplemented export returns 0
+	// and the game then dereferences null). The object layouts are unknown, so the
+	// storage is left as the game allocated it: writing a guessed size could
+	// overrun a smaller object.
+	static MEMPTR<void> ShoppingCatalog_ct(MEMPTR<void> thisPtr) { return thisPtr; }
+	static MEMPTR<void> Query_ct(MEMPTR<void> thisPtr) { return thisPtr; }
+	static MEMPTR<void> DateTime_ct(MEMPTR<void> thisPtr) { return thisPtr; }
+	static MEMPTR<void> ShoppingCatalog_dt(MEMPTR<void> thisPtr, uint32) { return thisPtr; }
+	static MEMPTR<void> Query_dt(MEMPTR<void> thisPtr, uint32) { return thisPtr; }
+
 	class : public COSModule
 	{
 		public:
@@ -31,6 +43,11 @@ namespace nn::ec
 		void RPLMapped() override
 		{
 			osLib_addFunction("nn_ec", "__ct__Q3_2nn2ec5MoneyFPCcN21", nnEcExport___ct__Q3_2nn2ec5MoneyFPCcN21);
+			cafeExportRegisterFunc(ShoppingCatalog_ct, "nn_ec", "__ct__Q3_2nn2ec15ShoppingCatalogFv", LogType::Placeholder);
+			cafeExportRegisterFunc(ShoppingCatalog_dt, "nn_ec", "__dt__Q3_2nn2ec15ShoppingCatalogFv", LogType::Placeholder);
+			cafeExportRegisterFunc(Query_ct, "nn_ec", "__ct__Q3_2nn2ec5QueryFv", LogType::Placeholder);
+			cafeExportRegisterFunc(Query_dt, "nn_ec", "__dt__Q3_2nn2ec5QueryFv", LogType::Placeholder);
+			cafeExportRegisterFunc(DateTime_ct, "nn_ec", "__ct__Q3_2nn2ec8DateTimeFv", LogType::Placeholder);
 		};
 
 	}s_COSnnEcModule;

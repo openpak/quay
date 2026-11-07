@@ -167,6 +167,14 @@ namespace act
 			return 0;
 		}
 
+		uint32 Finalize()
+		{
+			// counterpart of Initialize: the IOSU account service stays up, only the refcount drops
+			if (g_initializeCount > 0)
+				g_initializeCount--;
+			return 0;
+		}
+
 		NN_ERROR_CODE GetErrorCode(betype<nnResult>* nnResult)
 		{
 			NN_ERROR_CODE errCode = NNResultToErrorCode(*nnResult, NN_RESULT_MODULE_NN_ACT);
@@ -723,6 +731,7 @@ namespace nn::act
 			// country
 			osLib_addFunction("nn_act", "GetCountry__Q2_2nn3actFPc", nnActExport_GetCountry);
 			// timezone
+			cafeExportRegisterFunc(nn::act::Finalize, "nn_act", "Finalize__Q2_2nn3actFv", LogType::Placeholder);
 			cafeExportRegisterFunc(nn::act::GetTimeZoneId, "nn_act", "GetTimeZoneId__Q2_2nn3actFPc", LogType::Placeholder);
 
 			// parental
