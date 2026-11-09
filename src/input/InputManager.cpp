@@ -194,6 +194,10 @@ bool InputManager::load(size_t player_index, std::string_view filename)
 						emulated_controller->set_mapping(mapping, controller, button);
 					}
 				}
+
+				// a keyboard saved with nothing bound (opened the input settings, never mapped) gets the default layout
+				if (api == InputAPI::Keyboard && !cnode.child("mappings").child("entry"))
+					emulated_controller->set_default_mapping(controller);
 			}
 			catch (const std::exception& ex)
 			{

@@ -3,6 +3,11 @@
 Only OpenPak's changes are listed; everything else is upstream. `git log` stays the source of
 truth. Tags are `vX.Y.Z`; `v*.*.*` publishes a GitHub Release (`nightly` is a rolling pre-release).
 
+## v0.4.6 — 2026-11-09
+
+- Input: the keyboard now has a default layout for the Wii U GamePad and the Pro Controller (`keyboard_default_mapping`): WASD left stick, TFGH right stick, arrow keys D-pad, IJKL as X/B/Y/A (I up, K down, J left, L right), Q/E L/R, Z/C ZL/ZR, Return Plus, Backspace Minus, O Home, R/Y stick clicks (Linux and Windows key codes; none on macOS). Upstream's `set_default_mapping` had no Keyboard case, so a keyboard added to a controller stayed unbound and games ignored it
+- A saved keyboard controller with no mappings at all gets that layout when the profile loads, so a profile created by opening the Input settings and never mapping anything now works
+
 ## v0.4.5 — 2026-11-07
 
 - nn_act: `Finalize` implemented (drops the Initialize reference count; it was an unsupported call returning 0)

@@ -1,6 +1,7 @@
 #include "input/emulated/ProController.h"
 
 #include "input/api/Controller.h"
+#include "input/api/Keyboard/KeyboardController.h"
 #ifdef HAS_SDL
 #include "input/api/SDL/SDLController.h"
 #endif
@@ -137,6 +138,9 @@ bool ProController::set_default_mapping(const std::shared_ptr<ControllerBase>& c
 	std::vector<std::pair<uint64, uint64>> mapping;
 	switch (controller->api())
 	{
+	case InputAPI::Keyboard:
+		mapping = keyboard_default_mapping<ProController>();
+		break;
 #ifdef HAS_SDL
 	case InputAPI::SDLController: {
 		const auto sdl_controller = std::static_pointer_cast<SDLController>(controller);
