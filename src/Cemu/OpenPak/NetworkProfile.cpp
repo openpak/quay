@@ -136,4 +136,15 @@ int GetVersion()
 	return g_version;
 }
 
+std::string ResolveName(std::string_view host)
+{
+	std::string name{host};
+	// No server address of Cemu's own: the built-in list (which has none either) redirects nothing.
+	auto const address = openpak::NetworkProfile::RedirectFor(name, std::string{});
+	if (!address || address->empty())
+		return name;
+	cemuLog_log(LogType::Socket, "OpenPak DNS: {} -> {}", name, *address);
+	return *address;
+}
+
 } // namespace OpenPakNetworkProfile

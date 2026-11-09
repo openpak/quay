@@ -38,4 +38,10 @@ namespace OpenPakNetworkProfile
 	// profile version (-1 for the compiled-in defaults).
 	std::string GetSource();
 	int GetVersion();
+
+	// A guest DNS lookup (nsysnet gethostbyname/getaddrinfo): the literal address the applied
+	// profile's redirect.* sends `host` to, or `host` unchanged when OpenPak does not answer for
+	// it. This is what keeps the NAT check (nncs1/nncs2.app.nintendowifi.net) and any other
+	// redirected name off the host's resolver, as on a console using OpenPak DNS.
+	std::string ResolveName(std::string_view host);
 }

@@ -6,6 +6,7 @@
 #include "Cafe/OS/libs/coreinit/coreinit_GHS.h"
 
 #include "Common/socket.h"
+#include "Cemu/OpenPak/NetworkProfile.h"
 
 #if BOOST_OS_UNIX
 #include <netinet/tcp.h>
@@ -1352,7 +1353,8 @@ void nsysnetExport_gethostbyname(PPCInterpreter_t* hCPU)
 
 	cemuLog_log(LogType::Socket, "gethostbyname(\"{}\")", name);
 
-	hostent* he = gethostbyname(name);
+	const std::string resolvedName = OpenPakNetworkProfile::ResolveName(name);
+	hostent* he = gethostbyname(resolvedName.c_str());
 	if (he == NULL)
 	{
 		osLib_returnFromFunction(hCPU, MPTR_NULL);
@@ -1479,7 +1481,8 @@ void nsysnetExport_getaddrinfo(PPCInterpreter_t* hCPU)
 		hint.ai_protocol = 0;
 	}
 	struct addrinfo* result;
-	sint32 hr = getaddrinfo(nodeName, serviceName, &hint, &result);
+	const std::string resolvedNode = nodeName ? OpenPakNetworkProfile::ResolveName(nodeName) : std::string{};
+	sint32 hr = getaddrinfo(nodeName ? resolvedNode.c_str() : nullptr, serviceName, &hint, &result);
 	if (hr != 0)
 	{
 		cemuLog_log(LogType::Socket, "getaddrinfo failed with error {}", hr);

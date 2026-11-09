@@ -3,6 +3,10 @@
 Only OpenPak's changes are listed; everything else is upstream. `git log` stays the source of
 truth. Tags are `vX.Y.Z`; `v*.*.*` publishes a GitHub Release (`nightly` is a rolling pre-release).
 
+## v0.4.7 — 2026-11-09
+
+- Network: guest DNS (`nsysnet` `gethostbyname`/`getaddrinfo`) resolves through the applied OpenPak network profile's `redirect.*` (overrides, exact names, families; `never` names stay on the host's resolver). Before, every guest lookup went to the host's DNS, so the NEX NAT check (`nncs1/nncs2.app.nintendowifi.net`) reached Nintendo's dead servers instead of OpenPak and never completed. The wiiu profile now sends `nncs2` to OpenPak's second address. Built-in fallback (no profile fetched or cached) redirects nothing, as before. prds#166
+
 ## v0.4.6 — 2026-11-09
 
 - Input: the keyboard now has a default layout for the Wii U GamePad and the Pro Controller (`keyboard_default_mapping`): WASD left stick, TFGH right stick, arrow keys D-pad, IJKL as X/B/Y/A (I up, K down, J left, L right), Q/E L/R, Z/C ZL/ZR, Return Plus, Backspace Minus, O Home, R/Y stick clicks (Linux and Windows key codes; none on macOS). Upstream's `set_default_mapping` had no Keyboard case, so a keyboard added to a controller stayed unbound and games ignored it
